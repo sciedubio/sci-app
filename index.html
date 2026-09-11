@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <!-- 모바일 줌 방지 및 Safe Area 대응 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>과학 웹앱 허브</title>
   
@@ -14,7 +15,7 @@
   <!-- Galmuri Font (Retro Pixel Art Style) -->
   <link href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css" rel="stylesheet">
   
-  <!-- 필수 CDN (React 의존성 제거, Alpine.js 및 Tailwind 적용) -->
+  <!-- 필수 CDN (Alpine.js 및 Tailwind) -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -52,11 +53,10 @@
       /* 텍스트 드래그 방지 */
       -webkit-user-select: none; user-select: none;
     }
-    input, textarea, select { user-select: auto; font-size: 16px !important; } /* iOS 줌 방지 */
+    /* iOS 줌 방지를 위해 입력 폼 폰트 크기 강제 */
+    input, textarea, select { user-select: auto; font-size: 16px !important; } 
     
-    .h-screen-safe {
-      height: 100dvh; height: calc(var(--vh, 1vh) * 100);
-    }
+    .h-screen-safe { height: 100dvh; height: calc(var(--vh, 1vh) * 100); }
     
     /* Retro Bevel Box CSS */
     .bevel-box { background-color: #c6c6c6; border: 4px solid; border-top-color: #ffffff; border-left-color: #ffffff; border-bottom-color: #373737; border-right-color: #373737; color: #111; image-rendering: pixelated; }
@@ -121,10 +121,10 @@
     </header>
     
     <div class="flex-1 overflow-y-auto relative z-10 w-full scrollable-panel pb-24">
+      
       <template x-if="view === 'main'">
         <main class="p-4 flex flex-col gap-4 max-w-7xl mx-auto h-full">
           
-          <!-- 검색 및 제어 패널 -->
           <div class="flex flex-col gap-3 mb-2 border-b-2 border-white/20 pb-4">
             <div class="flex justify-between items-center flex-wrap gap-2">
               <span class="text-xl font-bold text-yellow-300 drop-shadow-md flex items-center gap-2">
@@ -180,7 +180,7 @@
                 <!-- 해시태그 렌더링 -->
                 <template x-if="app.tags">
                   <div class="flex flex-wrap gap-1 mb-3">
-                    <template x-for="tag in app.tags.split(',').map(t=>t.trim()).filter(Boolean)" :key="tag">
+                    <template x-for="tag in String(app.tags).split(',').map(t=>t.trim()).filter(Boolean)" :key="tag">
                       <button @click="searchQuery = tag" class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 font-bold border border-blue-400 rounded-full hover:bg-blue-300">
                         #<span x-text="tag"></span>
                       </button>
@@ -299,7 +299,9 @@
       <div class="mt-4 text-white font-bold text-xl tracking-widest animate-pulse">데이터 채굴 중...</div>
     </div>
 
-    <div x-show="modal.type !== null" style="display: none;" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style="padding-bottom: max(16px, var(--safe-bottom))" @click="closeModal()">
+    <!-- appForm 모달일 경우에만 바깥(백그라운드) 클릭 시 닫히지 않도록 잠금 설정 -->
+    <div x-show="modal.type !== null" style="display: none;" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style="padding-bottom: max(16px, var(--safe-bottom))" 
+         @click="if(modal.type !== 'appForm') closeModal()">
       <div class="bevel-box w-full max-w-md max-h-[90dvh] overflow-y-auto scrollable-panel p-6 flex flex-col bg-[#c6c6c6]" @click.stop>
         
         <!-- Password Modal -->
@@ -338,7 +340,7 @@
           </div>
         </template>
 
-        <!-- QR Code Modal (200x200) -->
+        <!-- QR Code Modal (200x200 강제 적용, 찌그러짐 방지) -->
         <template x-if="modal.type === 'qr'">
           <div class="flex flex-col items-center">
             <h3 class="text-2xl font-bold mb-2 text-black" x-text="modal.data?.name || ''"></h3>
@@ -350,9 +352,10 @@
           </div>
         </template>
 
-        <!-- App Form Modal (Add/Edit) -->
+        <!-- App Form Modal (웹앱 추가 및 수정) -->
         <template x-if="modal.type === 'appForm'">
           <div class="flex flex-col h-full">
+            <!-- null 에러 방지를 위해 formData.id 로 안전하게 판별 -->
             <h3 class="text-xl font-bold mb-4 text-black" x-text="formData.id ? '웹앱 수정' : '새 웹앱 추가'"></h3>
             
             <label class="text-sm font-bold mb-1 text-black">대분류 (사이드바 탭)</label>
@@ -360,8 +363,9 @@
               <template x-for="c in allCategories" :key="c"><option :value="c" x-text="c"></option></template>
               <option value="custom">➕ 직접 입력 (새 대분류)</option>
             </select>
+            <!-- 직접 입력 시 입력창 노출 및 자동 임시저장 연동 -->
             <template x-if="isCustomCat">
-              <input type="text" x-model="formData.customCategory" @input="formData.category = $event.target.value; saveDraft()" placeholder="새 대분류 이름 입력" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] font-bold" />
+              <input type="text" x-model="formData.customCategory" @input="saveDraft()" placeholder="새 대분류 이름 입력" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] font-bold" />
             </template>
 
             <label class="text-sm font-bold mb-1 mt-2 text-black">소분류 (단원 등)</label>
@@ -370,7 +374,7 @@
               <option value="custom">➕ 직접 입력 (새 소분류)</option>
             </select>
             <template x-if="isCustomUnit">
-              <input type="text" x-model="formData.customUnit" @input="formData.unit = $event.target.value; saveDraft()" placeholder="새 소분류 이름 입력" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] font-bold" />
+              <input type="text" x-model="formData.customUnit" @input="saveDraft()" placeholder="새 소분류 이름 입력" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] font-bold" />
             </template>
 
             <label class="text-sm font-bold mb-1 mt-2 text-black">이모지 아이콘 (1글자)</label>
@@ -411,7 +415,7 @@
           </div>
         </template>
 
-        <!-- Guide Modal -->
+        <!-- Guide Modal (앱스 스크립트 설정 가이드) -->
         <template x-if="modal.type === 'guide'">
           <div>
             <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-black">⚙️ 백엔드 연동 가이드</h3>
@@ -437,9 +441,11 @@
 
   <script>
     // --- Configurations ---
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxB4aDCofUp6TT4yC2gPfWkgA0LWm80V2-uLQ36jYFkJyrflzrXgWVqAIP-KgpBWPA/exec"; // TODO: 앱스 스크립트 웹앱 URL 입력
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB3LxlrYSw6eUA_d1jle5axEj9TDLde1-JanpTMjKQRwaMEIqa2x8ENpliMu6UvkQ/exec"; // TODO: 앱스 스크립트 새 배포 후 URL 교체
     const UNITS = ['1단원', '2단원', '3단원', '4단원', '5단원', '6단원', '7단원', '8단원'];
     const DEFAULT_CATEGORIES = ['중1 과학', '중2 과학', '중3 과학', '수업 영상', '공지/정보'];
+    
+    // 로컬 더미 데이터 (GAS 연동 실패 시 보여지는 샘플 데이터)
     const DUMMY_DATA = [
       { id: 'd1', category: '중2 과학', unit: '1단원', name: '원소 불꽃반응 실험', url: 'https://example.com/fire', emoji: '🔥', isHidden: false, isHot: false, date: '2026-06-01', views: 150, order: 1 },
       { id: 'd2', category: '중2 과학', unit: '2단원', name: '전자기 유도 발전기', url: 'https://example.com/elec', emoji: '⚡', isHidden: false, isHot: false, date: '2026-06-02', views: 80, tags: '시뮬레이션', order: 2 },
@@ -464,7 +470,7 @@
   var sheet = ss.getSheetByName('Apps');
   if(!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
   
-  // 비밀번호 인증 (GET 방식)
+  // 비밀번호 인증 (GET 방식 - CORS 우회)
   if (e && e.parameter && e.parameter.action === 'verify') {
     var settingsSheet = ss.getSheetByName('Settings');
     if (!settingsSheet) return ContentService.createTextOutput(JSON.stringify({result: 'error'})).setMimeType(ContentService.MimeType.JSON);
@@ -617,7 +623,7 @@ function doPost(e) {
           }
         },
 
-        // 관리자 인증 (GET)
+        // 관리자 인증 (GET) - CORS 에러 차단
         async verifyAdmin() {
           const inputPw = document.getElementById('pwInput').value;
           if(!inputPw) return;
@@ -666,6 +672,7 @@ function doPost(e) {
         isAutoHot(app) { return this.top3ViewsIds.includes(app.id); },
         isFuture(dateStr) { return dateStr ? new Date(dateStr) > new Date() : false; },
 
+        // 정렬: 1순위 (Order 숫자가 낮은 순), 2순위 (등록 최신순)
         get displayedApps() {
           let f = this.apps.filter(a => !a.isHidden && !this.isFuture(a.openDate));
           if (this.showFavoritesOnly) { f = f.filter(a => this.favorites.includes(a.id)); } 
@@ -677,7 +684,7 @@ function doPost(e) {
             const q = this.searchQuery.toLowerCase();
             f = this.apps.filter(a => !a.isHidden && !this.isFuture(a.openDate) && 
                 (a.name.toLowerCase().includes(q) || a.category.toLowerCase().includes(q) || 
-                 a.unit.toLowerCase().includes(q) || (a.tags && a.tags.toLowerCase().includes(q))));
+                 a.unit.toLowerCase().includes(q) || (a.tags && String(a.tags).toLowerCase().includes(q))));
           }
           return f.sort((a,b) => {
             const oA = (a.order === '' || a.order == null) ? 999 : Number(a.order);
@@ -712,16 +719,40 @@ function doPost(e) {
         openFormModal(app) {
           const isEdit = !!(app && app.id);
           this.formData = isEdit ? { ...app } : { category: '중2 과학', unit: '1단원', name: '', url: '', emoji: '🧪', tags: '', isHidden: false, isHot: false, openDate: '', order: 999 };
-          this.isCustomCat = false; this.isCustomUnit = false; this.formError = '';
+          this.isCustomCat = false; 
+          this.isCustomUnit = false; 
+          this.formData.customCategory = '';
+          this.formData.customUnit = '';
+          this.formError = '';
           this.openModal('appForm');
         },
-        checkCustomCat() { if(this.formData.category === 'custom') { this.isCustomCat = true; this.formData.category = ''; this.formData.customCategory = ''; } else { this.isCustomCat = false; this.saveDraft(); } },
-        checkCustomUnit() { if(this.formData.unit === 'custom') { this.isCustomUnit = true; this.formData.unit = ''; this.formData.customUnit = ''; } else { this.isCustomUnit = false; this.saveDraft(); } },
+        
+        // 카테고리 '직접입력' 선택 시 드롭다운 튕김 방지 로직
+        checkCustomCat() { 
+          if(this.formData.category === 'custom') { 
+            this.isCustomCat = true; 
+            this.formData.customCategory = ''; 
+          } else { 
+            this.isCustomCat = false; 
+            this.saveDraft(); 
+          } 
+        },
+        checkCustomUnit() { 
+          if(this.formData.unit === 'custom') { 
+            this.isCustomUnit = true; 
+            this.formData.customUnit = ''; 
+          } else { 
+            this.isCustomUnit = false; 
+            this.saveDraft(); 
+          } 
+        },
         saveDraft() { localStorage.setItem('draft_appData', JSON.stringify(this.formData)); },
         
         async submitForm() {
-          if(this.isCustomCat) this.formData.category = this.formData.customCategory;
-          if(this.isCustomUnit) this.formData.unit = this.formData.customUnit;
+          // 저장 시점에 'custom' 상태라면 입력된 텍스트값으로 치환
+          if(this.formData.category === 'custom') this.formData.category = this.formData.customCategory;
+          if(this.formData.unit === 'custom') this.formData.unit = this.formData.customUnit;
+          
           if(!this.formData.name || !this.formData.url || !this.formData.emoji || !this.formData.category || !this.formData.unit) {
             this.formError = '모든 필수 항목을 입력해주세요.'; return;
           }
@@ -740,6 +771,7 @@ function doPost(e) {
           this.syncAppAction('incrementView', { id: app.id }); // 백그라운드 서버 전송
           window.open(app.url, '_blank');
         },
+        // QR 코드 200x200 오류수정(M) 최적화
         openQrModal(app) {
           this.openModal('qr', app);
           this.$nextTick(() => {
@@ -751,6 +783,7 @@ function doPost(e) {
             });
           });
         },
+        // 샌드박스/IFrame 환경 클립보드 복사 Fallback 로직 보강
         async copyGasCode(e) {
           const btn = e.target; const original = btn.innerText;
           try {
