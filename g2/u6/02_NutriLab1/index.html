@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>영양소 검출 가상실험</title>
+  
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --text: #1e293b;
+      --border: #cbd5e1;
+      --vh: 1vh;
+      --sai-top: env(safe-area-inset-top);
+      --sai-bottom: env(safe-area-inset-bottom);
+    }
+
+    body {
+      font-family: "Pretendard", sans-serif;
+      height: calc(var(--vh, 1vh) * 100);
+      width: 100vw;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      touch-action: none; /* 최상위 스크롤 방지 */
+    }
+
+    .view-section {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+    }
+    .view-section.active {
+      display: flex;
+    }
+
+    .control-btn {
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .control-btn.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary);
+      background-color: #f0fdfa;
+      font-weight: bold;
+    }
+    
+    #sim-canvas {
+      touch-action: none;
+      outline: none;
+      cursor: none;
+    }
+    
+    .scroll-panel {
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    table.report-table th, table.report-table td {
+      border: 1px solid var(--border);
+      padding: 0.5rem;
+      text-align: center;
+      vertical-align: middle;
+    }
+    table.report-table th {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    
+    select.report-select {
+      appearance: none;
+      background-color: white;
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      padding: 0.25rem 1.5rem 0.25rem 0.5rem;
+      width: 100%;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1em;
+      outline: none;
+      text-align: center;
+      text-align-last: center;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translate(-50%, 100%); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+    .toast-msg {
+      animation: slideUp 0.3s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <section id="view-intro" class="view-section active bg-slate-50 justify-center items-center p-6 text-center relative">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col z-10">
+      <div class="bg-teal-600 p-6 text-white text-center">
+        <h1 class="text-2xl font-bold mb-2">동물과 에너지</h1>
+        <h2 class="text-lg opacity-90">영양소 검출 가상실험 🧪</h2>
+      </div>
+      <div class="p-6 flex flex-col gap-4 text-slate-700 text-left">
+        <p class="font-medium text-teal-700">📌 실험 규칙 및 목표</p>
+        <ul class="list-disc pl-5 space-y-1 text-sm font-medium">
+          <li><strong>규칙 1:</strong> 시료는 세로줄(열), 시약은 가로줄(행)에 맞춰 정확히 투여해야 합니다.</li>
+          <li><strong>규칙 2:</strong> 시료를 먼저 넣고, 그 위에 시약을 떨어뜨리세요.</li>
+          <li><strong>주의:</strong> 홈 밖으로 흘리거나 엉뚱한 곳에 넣으면 <span class="text-red-500">오류</span>, 이미 넣은 곳에 또 넣으면 <span class="text-orange-500">낭비</span>로 기록됩니다!</li>
+        </ul>
+        <button id="btn-start" class="mt-4 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors text-lg whitespace-nowrap">
+          실험 시작하기
+        </button>
+      </div>
+    </div>
+    
+    <button id="btn-teacher-guide" class="absolute bottom-4 right-4 text-xs text-slate-400 underline opacity-50 hover:opacity-100 p-2 z-20">
+      ⚙️ 교사 DB 설정
+    </button>
+  </section>
+
+  <section id="view-sim" class="view-section flex-col bg-slate-800">
+    <header class="flex flex-col bg-teal-900 text-white shrink-0 z-10 shadow-md w-full">
+      <div class="flex justify-between items-center px-4 py-2 border-b border-teal-800" style="padding-top: max(0.5rem, var(--sai-top));">
+        <div class="font-bold text-base md:text-lg whitespace-nowrap overflow-hidden text-ellipsis flex-1">🧪 20홈판 실험대</div>
+        <div class="flex gap-2 shrink-0">
+          <button id="btn-sim-reset" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 rounded text-sm font-medium whitespace-nowrap transition">초기화</button>
+          <button id="btn-sim-report" class="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 rounded text-sm font-bold whitespace-nowrap transition shadow">보고서 쓰기 📝</button>
+        </div>
+      </div>
+      <!-- 스크린샷 문제 해결: 캔버스를 가리지 않도록 얇은 상태바 띠로 배치 -->
+      <div class="flex flex-wrap items-center justify-between px-4 py-1.5 text-xs text-teal-100 bg-teal-950">
+        <span id="stat-correct" class="text-green-400 font-bold whitespace-nowrap">완료된 검출: 0/4</span>
+        <span id="stat-errors" class="whitespace-nowrap text-slate-300 truncate">오류(흘림/위치): 0 | 낭비(중복): 0 | 초기화: 0</span>
+      </div>
+    </header>
+
+    <div id="canvas-wrapper" class="flex-1 relative w-full overflow-hidden bg-slate-700">
+      <canvas id="sim-canvas" class="block w-full h-full"></canvas>
+    </div>
+
+    <div class="scroll-panel h-64 md:h-72 shrink-0 bg-slate-100 p-3 overflow-y-auto flex flex-col gap-3 shadow-inner" style="padding-bottom: max(0.75rem, var(--sai-bottom));">
+      <div class="bg-white rounded-lg p-2 shadow-sm border border-slate-200">
+        <div class="text-center text-xs font-bold text-teal-700 mb-2 whitespace-nowrap">💧 1. 시료 선택 (정해진 세로줄 빈 홈에 투여)</div>
+        <div class="grid grid-cols-5 gap-1.5">
+          <!-- 증류수를 맨 앞으로 배치 -->
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="sample" data-id="water" data-color="rgba(200,230,250,0.1)">
+            <div class="w-4 h-4 rounded-full bg-blue-50 border border-slate-300 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">증류수</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="sample" data-id="starch" data-color="rgba(250,250,250,0.8)">
+            <div class="w-4 h-4 rounded-full bg-white border border-slate-300 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">녹말</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="sample" data-id="glucose" data-color="rgba(200,230,250,0.2)">
+            <div class="w-4 h-4 rounded-full bg-white border border-slate-300 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">포도당</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="sample" data-id="protein" data-color="rgba(200,230,250,0.2)">
+            <div class="w-4 h-4 rounded-full bg-orange-50 border border-slate-300 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">단백질</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="sample" data-id="fat" data-color="rgba(255,255,200,0.6)">
+            <div class="w-4 h-4 rounded-full bg-yellow-50 border border-slate-300 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">지방</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg p-2 shadow-sm border border-slate-200">
+        <div class="text-center text-xs font-bold text-teal-700 mb-2 whitespace-nowrap">🧪 2. 검출 시약 선택 (정해진 가로줄 시료 위에 투여)</div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="reagent" data-id="iodine" data-color="rgba(180,100,20,0.9)">
+            <div class="w-4 h-4 rounded-full bg-amber-700 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">아이오딘</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="reagent" data-id="benedict" data-color="rgba(50,100,220,0.8)">
+            <div class="w-4 h-4 rounded-full bg-blue-500 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">베네딕트</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="reagent" data-id="biuret" data-color="rgba(80,120,220,0.8)">
+            <div class="w-4 h-4 rounded-full bg-indigo-500 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">뷰렛</span>
+          </button>
+          <button class="control-btn tool-select rounded border border-slate-300 py-1.5 flex flex-col items-center justify-center bg-slate-50" data-type="reagent" data-id="sudan3" data-color="rgba(200,50,50,0.8)">
+            <div class="w-4 h-4 rounded-full bg-red-600 mb-1"></div>
+            <span class="text-[0.65rem] font-medium whitespace-nowrap text-slate-700">수단 Ⅲ</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="btn-heat" class="w-full bg-orange-100 hover:bg-orange-200 border border-orange-300 text-orange-800 font-bold py-2.5 rounded-lg shadow-sm transition whitespace-nowrap flex items-center justify-center gap-2">
+        <span>🔥 물중탕 가열하기 (전체)</span>
+      </button>
+    </div>
+  </section>
+
+  <section id="view-report" class="view-section bg-slate-50 scroll-panel overflow-y-auto">
+    <header class="bg-teal-600 text-white p-4 sticky top-0 z-20 shadow-md flex justify-between items-center" style="padding-top: max(1rem, var(--sai-top));">
+      <h2 class="font-bold text-lg whitespace-nowrap">📝 실험 보고서</h2>
+      <button id="btn-back-to-sim" class="text-sm bg-teal-700 hover:bg-teal-800 px-3 py-1.5 rounded-md whitespace-nowrap shadow transition flex items-center gap-1">
+        <span>🔙 다시 실험</span>
+      </button>
+    </header>
+
+    <div class="p-4 flex flex-col gap-6 pb-24 max-w-3xl mx-auto w-full">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <h3 class="font-bold text-slate-700 mb-3 border-b pb-2">기본 정보</h3>
+        <div class="flex gap-4">
+          <input type="text" id="inp-student-id" placeholder="학번 (예: 20101)" class="w-1/3 border rounded px-3 py-2 text-sm focus:outline-teal-500 bg-slate-50">
+          <input type="text" id="inp-student-name" placeholder="이름" class="w-2/3 border rounded px-3 py-2 text-sm focus:outline-teal-500 bg-slate-50">
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+        <h3 class="font-bold text-slate-800 mb-2 leading-tight">1. 영양소별 검출 반응 탐구 결과 (배점: 25점)</h3>
+        <div class="min-w-[600px] mt-4">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th width="12%">영양소</th>
+                <th width="30%">검출 시약 명칭</th>
+                <th width="15%">반응 조건</th>
+                <th width="20%">반응 전 색깔</th>
+                <th width="23%">반응 후 색깔 (결과)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-bold bg-slate-50">녹말</td>
+                <td>
+                  <select id="sel-reagent-starch" class="report-select">
+                    <option value="">선택</option>
+                    <option value="iodine">아이오딘-아이오딘화 칼륨</option>
+                    <option value="benedict">베네딕트 용액</option>
+                    <option value="biuret">뷰렛 용액</option>
+                    <option value="sudan3">수단 III 용액</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="sel-cond-starch" class="report-select">
+                    <option value="">선택</option>
+                    <option value="room">상온</option>
+                    <option value="heat">물중탕(가열)</option>
+                  </select>
+                </td>
+                <td class="text-slate-600 bg-slate-50">갈색</td>
+                <td>
+                  <select id="sel-result-starch" class="report-select">
+                    <option value="">선택</option>
+                    <option value="blue">파란색</option>
+                    <option value="purple">보라색</option>
+                    <option value="blueblack">청람색</option>
+                    <option value="red">선홍색</option>
+                    <option value="yellowred">황적색</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-bold bg-slate-50">포도당</td>
+                <td>
+                  <select id="sel-reagent-glucose" class="report-select">
+                    <option value="">선택</option>
+                    <option value="iodine">아이오딘-아이오딘화 칼륨</option>
+                    <option value="benedict">베네딕트 용액</option>
+                    <option value="biuret">뷰렛 용액</option>
+                    <option value="sudan3">수단 III 용액</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="sel-cond-glucose" class="report-select">
+                    <option value="">선택</option>
+                    <option value="room">상온</option>
+                    <option value="heat">물중탕(가열)</option>
+                  </select>
+                </td>
+                <td class="text-slate-600 bg-slate-50">청록색</td>
+                <td>
+                  <select id="sel-result-glucose" class="report-select">
+                    <option value="">선택</option>
+                    <option value="blue">파란색</option>
+                    <option value="purple">보라색</option>
+                    <option value="blueblack">청람색</option>
+                    <option value="red">선홍색</option>
+                    <option value="yellowred">황적색</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-bold bg-slate-50">단백질</td>
+                <td class="text-xs text-slate-600 bg-slate-50">뷰렛 용액<br>(5% NaOH + 1% CuSO₄)</td>
+                <td class="text-slate-600 bg-slate-50">상온</td>
+                <td class="text-slate-600 bg-slate-50">파란색</td>
+                <td>
+                  <select id="sel-result-protein" class="report-select">
+                    <option value="">선택</option>
+                    <option value="blue">파란색</option>
+                    <option value="purple">보라색</option>
+                    <option value="blueblack">청람색</option>
+                    <option value="red">선홍색</option>
+                    <option value="yellowred">황적색</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-bold bg-slate-50">지방</td>
+                <td>
+                  <select id="sel-reagent-fat" class="report-select">
+                    <option value="">선택</option>
+                    <option value="iodine">아이오딘-아이오딘화 칼륨</option>
+                    <option value="benedict">베네딕트 용액</option>
+                    <option value="biuret">뷰렛 용액</option>
+                    <option value="sudan3">수단 III 용액</option>
+                  </select>
+                </td>
+                <td class="text-slate-600 bg-slate-50">상온</td>
+                <td class="text-slate-600 bg-slate-50">암붉은색</td>
+                <td>
+                  <select id="sel-result-fat" class="report-select">
+                    <option value="">선택</option>
+                    <option value="blue">파란색</option>
+                    <option value="purple">보라색</option>
+                    <option value="blueblack">청람색</option>
+                    <option value="red">선홍색</option>
+                    <option value="yellowred">황적색</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <h3 class="font-bold text-slate-800 mb-3 leading-tight">2. [원리 서술] 베네딕트 용액을 이용해 포도당을 검출할 때, 다른 시약과 달리 반드시 거쳐야 하는 실험 조건과 그 이유를 서술하시오.</h3>
+        <textarea id="inp-insight" class="w-full border rounded-lg p-3 text-sm min-h-[100px] focus:outline-teal-500 bg-slate-50" placeholder="조건과 이유를 작성하세요..."></textarea>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200" id="quiz-container">
+        <h3 class="font-bold text-slate-800 border-b pb-2 mb-3">3. 확인 퀴즈 (랜덤 3문항)</h3>
+        <div id="quiz-list" class="flex flex-col gap-4"></div>
+      </div>
+
+      <button id="btn-submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform transform active:scale-95 text-lg mt-4 whitespace-nowrap">
+        제출하기
+      </button>
+    </div>
+  </section>
+
+  <section id="view-done" class="view-section bg-slate-50 justify-center items-center p-6 text-center">
+    <div class="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm w-full">
+      <div class="text-6xl mb-4">🎉</div>
+      <h2 class="text-2xl font-bold text-slate-800 mb-2">제출 완료!</h2>
+      <p class="text-slate-600 mb-6">보고서가 성공적으로 저장되었습니다.<br>실험하느라 고생 많았습니다.</p>
+      <button id="btn-restart" class="bg-teal-600 text-white font-bold py-3 px-8 rounded-full shadow hover:bg-teal-700 transition w-full whitespace-nowrap">
+        처음으로 돌아가기
+      </button>
+    </div>
+  </section>
+
+  <div id="modal-teacher" class="fixed inset-0 bg-black/60 z-50 hidden flex-col justify-center items-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative">
+      <button id="btn-modal-close" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      <h3 class="font-bold text-lg text-teal-800 mb-4">⚙️ 구글 시트 연동 설정 (교사용)</h3>
+      <p class="text-sm text-slate-600 mb-4">Apps Script 웹앱 배포 URL을 입력하세요. 미입력 시 제출 기능이 스킵됩니다.</p>
+      <input type="text" id="inp-script-url" class="w-full border p-2 rounded mb-4 text-sm font-mono" placeholder="https://script.google.com/macros/s/...">
+      <button id="btn-save-url" class="w-full bg-teal-600 text-white py-2 rounded font-bold">저장하기</button>
+      
+      <div class="mt-6 pt-4 border-t border-slate-200">
+        <p class="text-xs font-bold text-slate-700 mb-2">Apps Script doPost 코드 (항목 개별 수합 버전)</p>
+        <textarea readonly class="w-full h-32 text-[9px] p-2 border rounded bg-slate-50 font-mono text-slate-500" onclick="this.select()">function doPost(e){
+  var lock=LockService.getScriptLock();
+  lock.tryLock(10000);
+  try{
+    var doc=SpreadsheetApp.getActiveSpreadsheet();
+    var sheet=doc.getActiveSheet();
+    if(sheet.getLastRow()===0){
+      // 헤더 열이 확장되었습니다 (선택 내역 모두 수합)
+      sheet.appendRow(['시간','학번','이름','올바른검출(성공)','오류(흘림/위치)','낭비(중복)','초기화','표점수(25)','퀴즈점수(3)','녹말시약','녹말조건','녹말결과','포도당시약','포도당조건','포도당결과','단백질결과','지방시약','지방결과','서술답안']);
+      sheet.getRange(1,1,1,sheet.getLastColumn()).setBackground('#0f766e').setFontColor('white').setFontWeight('bold');
+    }
+    var d=JSON.parse(e.postData.contents);
+    var rd=d.reportData; // 보고서 상세 데이터
+    sheet.appendRow([d.timestamp, d.studentId, d.studentName, d.metrics.correct, d.metrics.error, d.metrics.dup, d.metrics.reset, d.score1, d.quizScore, rd.starchReagent, rd.starchCond, rd.starchResult, rd.glucoseReagent, rd.glucoseCond, rd.glucoseResult, rd.proteinResult, rd.fatReagent, rd.fatResult, d.insight]);
+    return ContentService.createTextOutput(JSON.stringify({result:'success'})).setMimeType(ContentService.MimeType.JSON);
+  }catch(err){
+    return ContentService.createTextOutput(JSON.stringify({result:'error',error:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }finally{
+    lock.releaseLock();
+  }
+}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm text-center items-center"></div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+    
+    // 교사분들은 이곳에 URL을 직접 입력하셔도 됩니다.
+    let GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuEJkEr1BI3qPeOrvBLt7xN1dpUk17_QDeK-mMRe3FN49YvmMuulZ1-d5MH30U9M0/exec"; 
+
+    const setVh = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    window.addEventListener('resize', setVh);
+    setVh();
+
+    function showToast(message, type = 'error') {
+      const container = $('#toast-container');
+      const toast = document.createElement('div');
+      const colors = type === 'error' ? 'bg-red-600 text-white' : (type === 'success' ? 'bg-green-600 text-white' : (type === 'warning' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-white'));
+      toast.className = `toast-msg px-4 py-2 rounded-full shadow-lg text-sm font-bold opacity-95 ${colors}`;
+      toast.innerText = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    const QUIZ_POOL = [
+      { q: "녹말을 검출할 때 사용하는 시약은?", options: ["아이오딘-아이오딘화 칼륨 용액", "베네딕트 용액", "뷰렛 용액", "수단 III 용액"], a: 0 },
+      { q: "단백질 검출 시 나타나는 색깔 변화는?", options: ["황적색", "보라색", "청람색", "선홍색"], a: 1 },
+      { q: "지방을 검출하는 시약은?", options: ["아이오딘-아이오딘화 칼륨 용액", "베네딕트 용액", "뷰렛 용액", "수단 III 용액"], a: 3 },
+      { q: "포도당 검출 실험에서 반드시 필요한 과정은?", options: ["얼음물 냉각", "가열(물중탕)", "유리막대로 젓기", "빛 차단"], a: 1 },
+      { q: "포도당과 베네딕트 용액이 반응하여 가열되었을 때 나타나는 색은?", options: ["황적색", "보라색", "청람색", "선홍색"], a: 0 },
+      { q: "뷰렛 용액을 만들기 위해 혼합하는 물질은?", options: ["5% 수산화 나트륨 + 1% 황산 구리", "염산 + 마그네슘", "포도당 + 녹말", "에탄올 + 물"], a: 0 }
+    ];
+
+    // 행(가로줄), 열(세로줄) 매핑 규칙 (매우 중요 - 증류수 맨 앞)
+    const EXPECTED_COLS = { 'water': 0, 'starch': 1, 'glucose': 2, 'protein': 3, 'fat': 4 };
+    const EXPECTED_ROWS = { 'iodine': 0, 'benedict': 1, 'biuret': 2, 'sudan3': 3 };
+    const COL_NAMES = ['증류수', '녹말', '포도당', '단백질', '지방'];
+    const ROW_NAMES = ['아이오딘', '베네딕트', '뷰렛', '수단Ⅲ'];
+
+    class SimulationEngine {
+      constructor(canvasId) {
+        this.canvas = $(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.wells = []; // 20홈판 (5x4)
+        this.droplets = []; 
+        this.cols = 5;
+        this.rows = 4;
+        this.isRunning = false;
+        
+        this.mouseX = -100;
+        this.mouseY = -100;
+        
+        this.init();
+      }
+
+      init() {
+        const syncSize = () => {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          this.canvas.width = rect.width * dpr;
+          this.canvas.height = rect.height * dpr;
+          this.ctx.scale(dpr, dpr);
+          this.width = rect.width;
+          this.height = rect.height;
+          this.setupWells();
+        };
+        syncSize();
+        
+        this.resizeObserver = new ResizeObserver(() => syncSize());
+        this.resizeObserver.observe(this.canvas.parentElement);
+        
+        this.canvas.addEventListener('mousemove', (e) => this.updateMouse(e));
+        this.canvas.addEventListener('touchmove', (e) => {
+           e.preventDefault(); 
+           this.updateMouse(e);
+        }, {passive: false});
+        
+        this.canvas.addEventListener('mousedown', (e) => this.handleDrop(e));
+        this.canvas.addEventListener('touchstart', (e) => {
+           e.preventDefault();
+           this.updateMouse(e);
+           this.handleDrop(e);
+        }, {passive: false});
+      }
+
+      updateMouse(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        this.mouseX = clientX - rect.left;
+        this.mouseY = clientY - rect.top;
+      }
+
+      setupWells() {
+        this.wells = [];
+        const marginX = this.width * 0.12; 
+        const marginY = this.height * 0.15; 
+        const availableW = this.width - marginX * 1.5;
+        const availableH = this.height - marginY * 1.5;
+        const cellW = availableW / this.cols;
+        const cellH = availableH / this.rows;
+        const radius = Math.min(cellW, cellH) * 0.35;
+
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            this.wells.push({
+              row: r, col: c,
+              x: marginX + (c * cellW) + (cellW / 2),
+              y: marginY + (r * cellH) + (cellH / 2),
+              radius: radius,
+              sample: null, reagent: null, heated: false,
+              color: 'rgba(230, 235, 240, 0.5)'
+            });
+          }
+        }
+      }
+
+      resetWells(isManual = false) {
+        if (isManual) app.trackMetric('resetCount');
+        this.wells.forEach(w => {
+          w.sample = null; w.reagent = null; w.heated = false;
+          w.color = 'rgba(230, 235, 240, 0.5)';
+        });
+        if (isManual) {
+           app.updateStatsUI();
+           showToast('홈판을 초기화했습니다.', 'success');
+        }
+      }
+
+      heatAll() {
+        let heatedSomething = false;
+        this.wells.forEach(w => {
+          if (w.sample && w.reagent && !w.heated) {
+            w.heated = true;
+            this.evaluateReaction(w);
+            heatedSomething = true;
+          }
+        });
+        if (heatedSomething) showToast('물중탕 가열 완료!', 'success');
+        else showToast('가열할 혼합물이 없습니다.', 'normal');
+      }
+
+      getWellAtPosition(x, y) {
+        return this.wells.find(w => {
+          const dx = w.x - x; const dy = w.y - y;
+          return (dx*dx + dy*dy) <= (w.radius * w.radius);
+        });
+      }
+
+      handleDrop(e) {
+        if (!app.state.toolType || !app.state.toolId) {
+          showToast('하단에서 시료나 시약을 먼저 선택하세요.', 'normal');
+          return;
+        }
+        const well = this.getWellAtPosition(this.mouseX, this.mouseY);
+        
+        this.droplets.push({
+          x: this.mouseX, y: this.mouseY + 10,
+          vy: 0,
+          color: app.state.toolColor,
+          targetWell: well, 
+          toolType: app.state.toolType,
+          toolId: app.state.toolId
+        });
+      }
+
+      applyChemical(well, toolType, toolId) {
+        // 규칙 검증 로직
+        if (toolType === 'sample') {
+          if (EXPECTED_COLS[toolId] !== well.col) {
+            app.trackMetric('wrongAttempts');
+            return showToast(`[오류] 정해진 위치가 아닙니다!\n'${COL_NAMES[EXPECTED_COLS[toolId]]}' 시료는 ${EXPECTED_COLS[toolId]+1}번째 세로줄에 넣으세요.`, 'error');
+          }
+          if (well.sample) {
+            app.trackMetric('duplicateAttempts');
+            return showToast('이미 시료가 있습니다. 과다 투여는 [낭비]입니다.', 'warning');
+          }
+          if (well.reagent) {
+             app.trackMetric('wrongAttempts');
+             return showToast('[오류] 시약이 먼저 들어있습니다! 시료부터 넣으세요.', 'error');
+          }
+          well.sample = toolId;
+        } 
+        else if (toolType === 'reagent') {
+          if (EXPECTED_ROWS[toolId] !== well.row) {
+            app.trackMetric('wrongAttempts');
+            return showToast(`[오류] 정해진 위치가 아닙니다!\n'${ROW_NAMES[EXPECTED_ROWS[toolId]]}' 시약은 위에서 ${EXPECTED_ROWS[toolId]+1}번째 가로줄에 넣으세요.`, 'error');
+          }
+          if (!well.sample) {
+            app.trackMetric('wrongAttempts');
+            return showToast('[오류] 시료가 없는 빈 홈에 시약을 넣었습니다! 시료부터 넣으세요.', 'error');
+          }
+          if (well.reagent) {
+            app.trackMetric('duplicateAttempts');
+            return showToast('이미 시약을 넣었습니다. 과다 투여는 [낭비]입니다.', 'warning');
+          }
+          well.reagent = toolId;
+        }
+        this.evaluateReaction(well);
+      }
+
+      evaluateReaction(w) {
+        if (w.sample && !w.reagent) {
+           const sc = { 'starch': 'rgba(250, 250, 250, 0.8)', 'glucose': 'rgba(200, 230, 250, 0.2)', 'protein': 'rgba(200, 230, 250, 0.2)', 'fat': 'rgba(255, 255, 200, 0.6)', 'water': 'rgba(200, 230, 250, 0.1)' };
+           w.color = sc[w.sample] || w.color;
+           return;
+        }
+        if (w.sample && w.reagent) {
+          const combo = `${w.sample}_${w.reagent}`;
+          if (combo === 'starch_iodine') { w.color = 'rgba(10, 10, 100, 0.9)'; app.markSuccess('starch'); } 
+          else if (combo === 'glucose_benedict') {
+            if (w.heated) { w.color = 'rgba(220, 80, 20, 0.9)'; app.markSuccess('glucose'); }
+            else { w.color = 'rgba(50, 100, 220, 0.8)'; }
+          }
+          else if (combo === 'protein_biuret') { w.color = 'rgba(120, 50, 180, 0.9)'; app.markSuccess('protein'); }
+          else if (combo === 'fat_sudan3') { w.color = 'rgba(220, 40, 40, 0.9)'; app.markSuccess('fat'); }
+          else {
+            const rc = { 'iodine': 'rgba(180, 100, 20, 0.5)', 'benedict': 'rgba(50, 100, 220, 0.5)', 'biuret': 'rgba(80, 120, 220, 0.5)', 'sudan3': 'rgba(200, 50, 50, 0.5)' };
+            w.color = rc[w.reagent];
+          }
+        }
+      }
+
+      drawDropper(x, y, color) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.strokeStyle = '#94a3b8';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(-4, -30, 8, 30, 2);
+        this.ctx.fill(); this.ctx.stroke();
+        this.ctx.fillStyle = color;
+        this.ctx.beginPath();
+        this.ctx.roundRect(-2, -20, 4, 15, 1);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#ef4444';
+        this.ctx.beginPath();
+        this.ctx.arc(0, -35, 10, 0, Math.PI*2);
+        this.ctx.fill(); this.ctx.stroke();
+        this.ctx.restore();
+      }
+
+      update() {
+        for(let i = this.droplets.length - 1; i >= 0; i--) {
+          let d = this.droplets[i];
+          d.vy += 0.5;
+          d.y += d.vy;
+          
+          if (d.targetWell) {
+            if (d.y >= d.targetWell.y) {
+               this.applyChemical(d.targetWell, d.toolType, d.toolId);
+               this.droplets.splice(i, 1);
+            }
+          } else {
+            if (d.y > this.height) {
+               app.trackMetric('wrongAttempts'); 
+               showToast('[오류] 홈판 밖으로 액체를 흘렸습니다!', 'error');
+               this.droplets.splice(i, 1);
+            }
+          }
+        }
+      }
+
+      draw() {
+        if (!this.ctx) return;
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        this.ctx.fillStyle = '#e2e8f0';
+        const bw = this.width * 0.95, bh = this.height * 0.92;
+        const bX = (this.width-bw)/2, bY = (this.height-bh)/2 + 10;
+        this.ctx.beginPath();
+        this.ctx.roundRect(bX, bY, bw, bh, 20);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#cbd5e1';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#64748b';
+        this.ctx.font = 'bold 12px Pretendard';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        
+        if(this.wells.length > 0) {
+           for(let c=0; c<this.cols; c++) {
+              let x = this.wells[c].x;
+              let y = bY + 15;
+              this.ctx.fillText(COL_NAMES[c], x, y);
+           }
+           this.ctx.textAlign = 'right';
+           this.ctx.textBaseline = 'middle';
+           for(let r=0; r<this.rows; r++) {
+              let w = this.wells[r*this.cols];
+              let x = bX + 55;
+              let y = w.y;
+              this.ctx.fillText(ROW_NAMES[r], x, y);
+           }
+        }
+
+        this.wells.forEach(w => {
+          this.ctx.beginPath();
+          this.ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+          this.ctx.fillStyle = '#cbd5e1';
+          this.ctx.fill();
+          this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+          this.ctx.shadowBlur = 5;
+          this.ctx.shadowOffsetX = 2;
+          this.ctx.shadowOffsetY = 2;
+          this.ctx.stroke();
+          
+          this.ctx.shadowBlur = 0;
+          this.ctx.shadowOffsetX = 0;
+          this.ctx.shadowOffsetY = 0;
+          
+          if (w.color) {
+            this.ctx.beginPath();
+            this.ctx.arc(w.x, w.y, w.radius * 0.85, 0, Math.PI * 2);
+            this.ctx.fillStyle = w.color;
+            this.ctx.fill();
+            if(w.heated) {
+               this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+               this.ctx.font = `${w.radius*0.6}px sans-serif`;
+               this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+               this.ctx.fillText('♨', w.x, w.y);
+            }
+          }
+        });
+
+        this.droplets.forEach(d => {
+          this.ctx.fillStyle = d.color;
+          this.ctx.beginPath();
+          this.ctx.arc(d.x, d.y, 5, 0, Math.PI*2);
+          this.ctx.fill();
+        });
+
+        if (app.state.toolType && this.mouseX > 0 && this.mouseY > 0) {
+           this.drawDropper(this.mouseX, this.mouseY, app.state.toolColor);
+        }
+      }
+
+      startLoop() {
+        this.isRunning = true;
+        const loop = () => {
+          if(!this.isRunning) return;
+          this.update();
+          this.draw();
+          requestAnimationFrame(loop);
+        };
+        loop();
+      }
+      
+      stopLoop() {
+        this.isRunning = false;
+      }
+    }
+
+    const app = {
+      state: {
+        view: 'intro',
+        toolType: null, toolId: null, toolColor: null,
+        metrics: { wrongAttempts: 0, duplicateAttempts: 0, resetCount: 0, correctDetections: 0 },
+        successFlags: { starch: false, glucose: false, protein: false, fat: false },
+        selectedQuizzes: []
+      },
+      engine: null,
+
+      init() {
+        this.bindEvents();
+        this.loadSettings();
+      },
+
+      bindEvents() {
+        $('#btn-start').addEventListener('click', () => this.navigate('sim'));
+        $('#btn-sim-report').addEventListener('click', () => this.navigate('report'));
+        $('#btn-back-to-sim').addEventListener('click', () => this.navigate('sim'));
+        $('#btn-restart').addEventListener('click', () => this.resetFullApp());
+        $('#btn-submit').addEventListener('click', () => this.submitReport());
+
+        $('#btn-sim-reset').addEventListener('click', () => { if(this.engine) this.engine.resetWells(true); });
+        $('#btn-heat').addEventListener('click', () => { if(this.engine) this.engine.heatAll(); });
+
+        $$('.tool-select').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const el = e.currentTarget;
+            $$('.tool-select').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            this.state.toolType = el.dataset.type;
+            this.state.toolId = el.dataset.id;
+            this.state.toolColor = el.dataset.color;
+          });
+        });
+
+        $('#btn-teacher-guide').addEventListener('click', () => {
+            $('#modal-teacher').classList.remove('hidden');
+            $('#modal-teacher').classList.add('flex');
+        });
+        $('#btn-modal-close').addEventListener('click', () => {
+            $('#modal-teacher').classList.add('hidden');
+            $('#modal-teacher').classList.remove('flex');
+        });
+        $('#btn-save-url').addEventListener('click', () => {
+          const url = $('#inp-script-url').value.trim();
+          if(url) { localStorage.setItem('TEACHER_SCRIPT_URL', url); GOOGLE_SCRIPT_URL = url; showToast('저장 완료', 'success'); }
+          $('#modal-teacher').classList.add('hidden');
+          $('#modal-teacher').classList.remove('flex');
+        });
+
+        document.addEventListener('visibilitychange', () => {
+           if(document.hidden && this.engine) this.engine.stopLoop();
+           else if(!document.hidden && this.engine && this.state.view==='sim') this.engine.startLoop();
+        });
+      },
+
+      loadSettings() {
+        const savedUrl = localStorage.getItem('TEACHER_SCRIPT_URL');
+        if (savedUrl) { GOOGLE_SCRIPT_URL = savedUrl; $('#inp-script-url').value = savedUrl; }
+      },
+
+      navigate(viewId) {
+        $$('.view-section').forEach(el => el.classList.remove('active'));
+        $(`#view-${viewId}`).classList.add('active');
+        
+        if (viewId === 'sim') {
+          if (!this.engine) this.engine = new SimulationEngine('#sim-canvas');
+          this.engine.startLoop();
+        } else {
+          if (this.engine) this.engine.stopLoop();
+        }
+
+        if (viewId === 'report') this.buildQuiz(); 
+
+        this.state.view = viewId;
+        window.scrollTo(0,0);
+      },
+
+      trackMetric(key) {
+        this.state.metrics[key]++;
+        this.updateStatsUI();
+      },
+      
+      markSuccess(nutType) {
+        if (!this.state.successFlags[nutType]) {
+          this.state.successFlags[nutType] = true;
+          this.state.metrics.correctDetections++;
+          this.updateStatsUI();
+          showToast('올바른 검출에 성공했습니다!', 'success');
+        }
+      },
+
+      updateStatsUI() {
+        $('#stat-correct').innerText = `완료된 검출: ${this.state.metrics.correctDetections}/4`;
+        $('#stat-errors').innerText = `오류(흘림/위치): ${this.state.metrics.wrongAttempts} | 낭비(중복): ${this.state.metrics.duplicateAttempts} | 초기화: ${this.state.metrics.resetCount}`;
+        
+        const btn = $('#btn-sim-report');
+        if (this.state.metrics.correctDetections >= 4) btn.classList.add('animate-bounce', 'bg-green-500', 'text-white');
+      },
+
+      buildQuiz() {
+        if (this.state.selectedQuizzes.length > 0) return;
+        const shuffled = [...QUIZ_POOL].sort(() => 0.5 - Math.random());
+        this.state.selectedQuizzes = shuffled.slice(0, 3);
+        
+        const container = $('#quiz-list');
+        container.innerHTML = '';
+        
+        this.state.selectedQuizzes.forEach((q, idx) => {
+          let optsHTML = q.options.map((opt, oIdx) => `
+            <label class="flex items-center gap-2 text-sm bg-slate-50 p-2 border rounded hover:bg-teal-50 cursor-pointer">
+              <input type="radio" name="quiz-${idx}" value="${oIdx}" class="text-teal-600 focus:ring-teal-500">
+              ${opt}
+            </label>
+          `).join('');
+
+          container.innerHTML += `
+            <div class="mb-4 quiz-item" data-idx="${idx}">
+              <p class="font-bold text-slate-700 text-sm mb-2">Q${idx+1}. ${q.q}</p>
+              <div class="flex flex-col gap-1">${optsHTML}</div>
+            </div>
+          `;
+        });
+      },
+
+      gradeReport() {
+        let score = 0;
+        const ans = { starch: { r: 'iodine', c: 'room', res: 'blueblack' }, glucose: { r: 'benedict', c: 'heat', res: 'yellowred' }, fat: { r: 'sudan3', res: 'red' } };
+        if($('#sel-reagent-starch').value === ans.starch.r) score+=2;
+        if($('#sel-cond-starch').value === ans.starch.c) score+=2;
+        if($('#sel-result-starch').value === ans.starch.res) score+=4;
+        if($('#sel-reagent-glucose').value === ans.glucose.r) score+=3;
+        if($('#sel-cond-glucose').value === ans.glucose.c) score+=3;
+        if($('#sel-result-glucose').value === ans.glucose.res) score+=3;
+        if($('#sel-result-protein').value === 'purple') score+=4;
+        if($('#sel-reagent-fat').value === ans.fat.r) score+=2;
+        if($('#sel-result-fat').value === ans.fat.res) score+=2;
+        return score; 
+      },
+
+      getQuizScore() {
+        let qs = 0;
+        this.state.selectedQuizzes.forEach((q, idx) => {
+          const checked = $(`input[name="quiz-${idx}"]:checked`);
+          if (checked && parseInt(checked.value) === q.a) qs += 1;
+        });
+        return qs; 
+      },
+
+      async submitReport() {
+        const studentId = $('#inp-student-id').value.trim();
+        const studentName = $('#inp-student-name').value.trim();
+        const insight = $('#inp-insight').value.trim();
+
+        if (!studentId || !studentName) return showToast('학번과 이름을 입력해주세요.');
+        if (!insight) return showToast('서술형 문항을 짧게라도 작성해주세요.'); // 10자 제한 해제 (빈칸만 아니면 됨)
+        for(let i=0; i<3; i++) {
+           if(!$(`input[name="quiz-${i}"]:checked`)) return showToast(`${i+1}번 퀴즈를 풀어주세요.`);
+        }
+
+        const btn = $('#btn-submit');
+        btn.disabled = true; btn.innerText = '제출 중...⏳';
+
+        // 학생들이 드롭다운에서 선택한 세부 내용 모두 수집
+        const reportData = {
+          starchReagent: $('#sel-reagent-starch').options[$('#sel-reagent-starch').selectedIndex].text,
+          starchCond: $('#sel-cond-starch').options[$('#sel-cond-starch').selectedIndex].text,
+          starchResult: $('#sel-result-starch').options[$('#sel-result-starch').selectedIndex].text,
+          glucoseReagent: $('#sel-reagent-glucose').options[$('#sel-reagent-glucose').selectedIndex].text,
+          glucoseCond: $('#sel-cond-glucose').options[$('#sel-cond-glucose').selectedIndex].text,
+          glucoseResult: $('#sel-result-glucose').options[$('#sel-result-glucose').selectedIndex].text,
+          proteinResult: $('#sel-result-protein').options[$('#sel-result-protein').selectedIndex].text,
+          fatReagent: $('#sel-reagent-fat').options[$('#sel-reagent-fat').selectedIndex].text,
+          fatResult: $('#sel-result-fat').options[$('#sel-result-fat').selectedIndex].text
+        };
+
+        const payload = {
+          timestamp: new Date().toLocaleString(),
+          studentId, studentName,
+          metrics: {
+            correct: this.state.metrics.correctDetections,
+            error: this.state.metrics.wrongAttempts,
+            dup: this.state.metrics.duplicateAttempts,
+            reset: this.state.metrics.resetCount
+          },
+          score1: this.gradeReport(),
+          quizScore: this.getQuizScore(),
+          reportData: reportData, // 구글 시트로 보낼 개별 데이터 추가
+          insight
+        };
+
+        if (!GOOGLE_SCRIPT_URL) {
+          setTimeout(() => { this.navigate('done'); btn.disabled = false; btn.innerText = '제출하기'; }, 800);
+          return;
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          this.navigate('done');
+        } catch (e) {
+          showToast('네트워크 오류. 다시 시도하세요.');
+        } finally {
+          btn.disabled = false; btn.innerText = '제출하기';
+        }
+      },
+
+      resetFullApp() {
+        this.state.metrics = { wrongAttempts: 0, duplicateAttempts: 0, resetCount: 0, correctDetections: 0 };
+        this.state.successFlags = { starch: false, glucose: false, protein: false, 단백질: false, fat: false };
+        this.state.toolType = null; this.state.toolId = null; this.state.toolColor = null;
+        this.state.selectedQuizzes = [];
+        
+        $$('.tool-select').forEach(b => b.classList.remove('active'));
+        if (this.engine) this.engine.resetWells();
+        this.updateStatsUI();
+
+        $('#inp-student-id').value = ''; $('#inp-student-name').value = ''; $('#inp-insight').value = '';
+        $$('.report-select').forEach(sel => sel.value = '');
+        $('#quiz-list').innerHTML = ''; 
+
+        this.navigate('intro');
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.app = app;
+      try { app.init(); } 
+      catch (err) {
+        document.body.innerHTML = `<div style="padding:2rem;text-align:center;color:red;"><h2>오류 발생</h2><p>${err.message}</p></div>`;
+      }
+    });
+  </script>
+</body>
+</html>
