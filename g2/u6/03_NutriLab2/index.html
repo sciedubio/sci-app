@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>영양소 검출 가상 실험</title>
+  
+  <!-- SEO & PWA Meta -->
+  <meta name="theme-color" content="#10b981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Pretendard', 'Noto Sans KR', 'sans-serif'] },
+          colors: {
+            primary: 'var(--primary)',
+            secondary: 'var(--secondary)',
+            surface: 'var(--surface)',
+            bg: 'var(--bg)',
+            textMain: 'var(--text)',
+            muted: 'var(--muted)',
+            border: 'var(--border)',
+          },
+          boxShadow: {
+            'card': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
+            'inner-glow': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --primary: #10b981; /* 생명과학 느낌의 에메랄드 그린 */
+      --secondary: #3b82f6; 
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --vh: 1vh;
+    }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--textMain);
+      /* 모바일 스크롤 및 바운스 방지 (전역 touch-action: none 금지 규칙 준수) */
+      overflow: hidden;
+      height: calc(var(--vh, 1vh) * 100);
+      margin: 0;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 화면 전환용 유틸 */
+    .view-section {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+    .view-section.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* 버튼 스타일 통일 */
+    .btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      border-radius: 0.75rem;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    }
+    .btn-primary:hover { background-color: #059669; }
+    
+    .menu-btn {
+      flex: 0 0 auto;
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .menu-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+
+    /* 토스트 알림 */
+    #toast {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      z-index: 1000;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* 캔버스 전용 (터치 방지) */
+    canvas {
+      touch-action: none;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 에러 발생 시 커스텀 모달 방패막 -->
+  <div id="error-boundary" class="hidden absolute inset-0 bg-white/90 z-50 flex-col items-center justify-center p-6 backdrop-blur-sm">
+    <div class="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 flex flex-col items-center text-center max-w-sm shadow-xl">
+      <div class="text-4xl mb-3">⚠️</div>
+      <h2 class="font-bold text-lg mb-2">오류가 발생했습니다</h2>
+      <p id="error-msg" class="text-sm opacity-80 mb-4 word-break break-all">알 수 없는 오류</p>
+      <button onclick="location.reload()" class="btn bg-red-600 text-white px-6 py-2">새로고침</button>
+    </div>
+  </div>
+
+  <!-- 토스트 메시지 -->
+  <div id="toast" class="bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg font-medium text-sm flex items-center gap-2">
+    <span id="toast-icon">💡</span>
+    <span id="toast-msg">메시지</span>
+  </div>
+
+  <!-- 1. Intro View -->
+  <section id="view-intro" class="view-section active justify-center items-center p-6 relative bg-gradient-to-br from-emerald-50 to-blue-50">
+    <div class="max-w-md w-full bg-surface p-8 rounded-3xl shadow-card text-center relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-blue-400"></div>
+      
+      <div class="w-20 h-20 mx-auto bg-emerald-100 rounded-2xl flex items-center justify-center mb-6 rotate-3 shadow-inner">
+        <span class="text-4xl">🧪</span>
+      </div>
+      
+      <h1 class="text-3xl font-extrabold text-textMain mb-2 tracking-tight">영양소 검출<br>가상 실험</h1>
+      <p class="text-muted text-sm mb-8 leading-relaxed">
+        미지의 용액에 어떤 영양소가 들어있을까요?<br>
+        스포이드로 시약을 떨어뜨려 색깔 변화를 관찰하고 영양소를 찾아보세요.
+      </p>
+      
+      <div class="bg-gray-50 rounded-2xl p-4 mb-8 text-left border border-border">
+        <h3 class="font-bold text-sm mb-3 flex items-center gap-2"><span class="text-primary">📌</span>실험 미션</h3>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5">•</span><span>4가지 영양소의 검출 시약과 반응색 알아보기</span></li>
+          <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5">•</span><span>소화 효소(침)에 의한 녹말의 분해 과정 확인하기</span></li>
+          <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5">•</span><span>반투막을 통과하는 물질 관찰하기</span></li>
+        </ul>
+      </div>
+
+      <button onclick="navigate('sim')" class="btn btn-primary w-full py-4 text-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+        실험 시작하기
+      </button>
+    </div>
+
+    <!-- 교사 가이드 (Intro 하단) -->
+    <div class="absolute bottom-4 text-xs text-gray-400">
+      <button onclick="document.getElementById('teacher-guide').classList.remove('hidden')" class="hover:text-primary transition-colors flex items-center gap-1">
+        <span>⚙️ 교사 가이드 및 DB 연동</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 2. Simulation View -->
+  <section id="view-sim" class="view-section bg-bg">
+    <!-- 헤더 -->
+    <header class="flex-none h-14 bg-surface border-b border-border px-4 flex items-center justify-between z-10 shadow-sm">
+      <button onclick="navigate('intro')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      </button>
+      <h2 class="font-bold text-lg text-textMain" id="sim-title">영양소 검출</h2>
+      <button onclick="navigate('report')" class="btn btn-primary px-4 py-2 text-sm">
+        보고서 작성
+      </button>
+    </header>
+
+    <!-- 시뮬레이션 영역 -->
+    <div class="flex-1 relative w-full overflow-hidden flex flex-col" id="canvas-wrapper">
+      <div class="absolute inset-0 z-0 pointer-events-none opacity-50 bg-[radial-gradient(circle_at_50%_120%,rgba(16,185,129,0.1),transparent_50%)]"></div>
+      <!-- 캔버스 (크기는 JS에서 관리) -->
+      <canvas id="simCanvas" class="absolute inset-0 w-full h-full block z-10"></canvas>
+      
+      <!-- 안내 오버레이 -->
+      <div id="sim-guide-overlay" class="absolute top-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-sm text-sm font-medium text-gray-600 z-20 pointer-events-none border border-gray-100 flex items-center gap-2">
+        <span class="animate-bounce">👇</span> 하단에서 시나리오를 선택하고 시약을 드래그하세요
+      </div>
+    </div>
+
+    <!-- 하단 시나리오 메뉴 (가로 스크롤) -->
+    <div class="flex-none h-20 bg-surface shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t border-border flex items-center overflow-x-auto px-4 gap-2 z-20 pb-safe" style="touch-action: pan-x;">
+      <button class="menu-btn active" data-type="basic">기본 4종</button>
+      <div class="w-px h-8 bg-border mx-1 flex-none"></div>
+      <button class="menu-btn" data-type="starch">녹말</button>
+      <button class="menu-btn" data-type="protein">단백질</button>
+      <button class="menu-btn" data-type="fat">지방</button>
+      <button class="menu-btn" data-type="glucose">포도당</button>
+      <button class="menu-btn" data-type="milk">우유</button>
+      <div class="w-px h-8 bg-border mx-1 flex-none"></div>
+      <button class="menu-btn" data-type="saliva">소화 작용(침)</button>
+      <button class="menu-btn" data-type="membrane">반투막(흡수)</button>
+      <div class="w-px h-8 bg-border mx-1 flex-none"></div>
+      <button class="menu-btn" data-type="all">모든 영양소</button>
+      <button class="menu-btn bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" data-type="unknown">❓ 미지의 물질</button>
+    </div>
+  </section>
+
+  <!-- 3. Report View -->
+  <section id="view-report" class="view-section bg-bg overflow-y-auto pb-safe" style="touch-action: pan-y;">
+    <header class="sticky top-0 bg-surface/90 backdrop-blur-md border-b border-border p-4 flex items-center justify-between z-10 shadow-sm">
+      <button onclick="navigate('sim')" class="text-gray-500 hover:text-gray-800 font-medium">← 실험으로</button>
+      <h2 class="font-bold text-lg">실험 보고서</h2>
+      <div class="w-16"></div>
+    </header>
+
+    <div class="p-4 sm:p-6 max-w-2xl mx-auto w-full space-y-6">
+      
+      <!-- 인적사항 -->
+      <div class="bg-surface p-5 rounded-2xl shadow-sm border border-border">
+        <h3 class="font-bold mb-4 text-primary flex items-center gap-2">👤 기본 정보</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">학번</label>
+            <input type="number" id="stu-id" class="w-full bg-bg border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="예: 2101" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">이름</label>
+            <input type="text" id="stu-name" class="w-full bg-bg border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="홍길동" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- 미지의 물질 정답 추론 (미지의 물질 시나리오를 경험했을 경우에만 활성화 가능성, 여기선 상시 둠) -->
+      <div class="bg-surface p-5 rounded-2xl shadow-sm border border-border">
+        <h3 class="font-bold mb-2 text-primary flex items-center gap-2">❓ 미지의 물질 정답 추론</h3>
+        <p class="text-xs text-muted mb-4">실험에서 '미지의 물질'을 검출해보았다면, 포함되어 있다고 생각하는 영양소를 모두 선택하세요.</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <label class="flex items-center gap-2 p-3 border border-border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <input type="checkbox" name="unknown-guess" value="starch" class="w-4 h-4 text-primary rounded focus:ring-primary">
+            <span class="text-sm font-medium">녹말</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 border border-border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <input type="checkbox" name="unknown-guess" value="protein" class="w-4 h-4 text-primary rounded focus:ring-primary">
+            <span class="text-sm font-medium">단백질</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 border border-border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <input type="checkbox" name="unknown-guess" value="fat" class="w-4 h-4 text-primary rounded focus:ring-primary">
+            <span class="text-sm font-medium">지방</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 border border-border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <input type="checkbox" name="unknown-guess" value="glucose" class="w-4 h-4 text-primary rounded focus:ring-primary">
+            <span class="text-sm font-medium">포도당</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 알게된 점 -->
+      <div class="bg-surface p-5 rounded-2xl shadow-sm border border-border">
+        <h3 class="font-bold mb-4 text-primary flex items-center gap-2">💡 알게된 점</h3>
+        <textarea id="stu-insight" rows="3" class="w-full bg-bg border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none text-sm leading-relaxed" placeholder="실험을 통해 새롭게 알게 된 점이나 느낀 점을 자유롭게 적어주세요."></textarea>
+      </div>
+
+      <!-- 퀴즈 영역 -->
+      <div class="bg-surface p-5 rounded-2xl shadow-sm border border-border">
+        <h3 class="font-bold mb-4 text-primary flex items-center gap-2">📝 확인 퀴즈</h3>
+        <div id="quiz-container" class="space-y-6">
+          <!-- JS로 동적 생성됨 -->
+        </div>
+      </div>
+
+      <button id="btn-submit" onclick="submitReport()" class="btn btn-primary w-full py-4 text-lg shadow-lg mb-8">
+        결과 제출하기
+      </button>
+    </div>
+  </section>
+
+  <!-- 4. Done View -->
+  <section id="view-done" class="view-section justify-center items-center p-6 bg-emerald-50">
+    <div class="max-w-sm w-full bg-surface p-8 rounded-3xl shadow-card text-center">
+      <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
+        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">제출 완료!</h2>
+      <p class="text-muted text-sm mb-8">실험 보고서가 성공적으로 전송되었습니다.<br>수고하셨습니다.</p>
+      
+      <div id="result-summary" class="bg-gray-50 rounded-xl p-4 mb-8 text-sm font-medium text-gray-700">
+        <!-- 퀴즈 점수 표시 -->
+      </div>
+
+      <button onclick="resetApp()" class="btn border border-border bg-white text-gray-700 w-full py-3 hover:bg-gray-50">
+        처음으로 돌아가기
+      </button>
+    </div>
+  </section>
+
+  <!-- 교사 가이드 모달 -->
+  <div id="teacher-guide" class="hidden fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style="touch-action: pan-y;">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 class="font-bold text-lg flex items-center gap-2">⚙️ DB 연동 가이드</h3>
+        <button onclick="document.getElementById('teacher-guide').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 transition-colors">✕</button>
+      </div>
+      
+      <div class="p-6 overflow-y-auto text-sm text-gray-700 space-y-5">
+        <p>학생들이 제출한 보고서와 퀴즈 점수를 Google Sheets로 자동으로 수집할 수 있습니다. 아래 절차를 따라 설정하세요.</p>
+        
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <h4 class="font-bold text-blue-800 mb-2">1단계: Google Sheets 준비</h4>
+          <ol class="list-decimal pl-5 space-y-1 text-blue-900">
+            <li>Google Drive에서 새 Google Sheets를 만듭니다.</li>
+            <li>메뉴에서 [확장 프로그램] > [Apps Script]를 클릭합니다.</li>
+          </ol>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <h4 class="font-bold text-gray-800 mb-2">2단계: Apps Script 코드 복사 및 붙여넣기</h4>
+          <p class="mb-2">아래 코드를 복사하여 편집기에 붙여넣고 저장(Ctrl+S)합니다.</p>
+          <div class="relative">
+            <textarea id="script-code" class="w-full h-32 bg-gray-800 text-green-400 p-3 rounded-lg font-mono text-xs outline-none resize-none" readonly>
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['시간', '학번', '이름', '미지물질 예측', '알게된점', '퀴즈점수']);
+      sheet.getRange(1, 1, 1, sheet.getLastColumn()).setFontWeight('bold').setBackground('#10b981').setFontColor('#ffffff');
+    }
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([data.timestamp, data.studentId, data.studentName, data.unknownGuess, data.insight, data.quizScore]);
+    return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+            </textarea>
+            <button onclick="copyToClipboard('script-code')" class="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded text-xs transition-colors backdrop-blur-sm border border-white/20">복사</button>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <h4 class="font-bold text-blue-800 mb-2">3단계: 배포 및 URL 획득</h4>
+          <ol class="list-decimal pl-5 space-y-1 text-blue-900">
+            <li>우측 상단의 [배포] > [새 배포]를 클릭합니다.</li>
+            <li>유형 선택(톱니바퀴) > [웹 앱]을 선택합니다.</li>
+            <li>액세스 권한을 <strong>'모든 사용자'</strong>로 설정하고 [배포]를 클릭합니다.</li>
+            <li>권한 검토 안내가 나오면 허용해 줍니다.</li>
+            <li>생성된 <strong>웹 앱 URL</strong>을 복사합니다.</li>
+          </ol>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <h4 class="font-bold text-gray-800 mb-2">4단계: 앱에 URL 적용</h4>
+          <p>복사한 URL을 본 웹앱 코드의 최상단 <code class="bg-gray-200 px-1 rounded text-pink-600">GOOGLE_SCRIPT_URL</code> 변수에 붙여넣고 다시 배포(또는 로드)하면 연동이 완료됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =====================================================================
+       1. 전역 변수 및 설정
+       ===================================================================== */
+    // DOM 헬퍼
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+
+    // ★ 교사: 여기에 발급받은 Google Apps Script URL을 입력하세요.
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwv2uLLbyWttQDRFFVVVrXWwsC3ZoGooPDO-5d5oheAFRvhUkR19bWd_yi8yVnrYFI/exec"; // 예: "https://script.google.com/macros/s/.../exec"
+
+    // 뷰포트 높이 보정 (모바일 툴바 대응)
+    const setVh = () => {
+      let vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', () => setTimeout(setVh, 100));
+    setVh();
+
+    // 토스트 알림 함수
+    let toastTimeout;
+    const showToast = (msg, isError = false) => {
+      const toast = $('#toast');
+      $('#toast-msg').textContent = msg;
+      $('#toast-icon').textContent = isError ? '❌' : '✅';
+      toast.className = `bg-${isError ? 'red' : 'gray'}-800 text-white px-5 py-2.5 rounded-full shadow-xl font-medium text-sm flex items-center gap-2 fixed top-4 left-1/2 -translate-x-1/2 transition-all duration-300 z-[9999]`;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+    };
+
+    // 복사 헬퍼
+    const copyToClipboard = (id) => {
+      const el = $(`#${id}`);
+      el.select();
+      document.execCommand('copy');
+      showToast('코드가 복사되었습니다.');
+    };
+
+    // 앱 상태 관리
+    const appState = {
+      view: 'intro',
+      unknownActualContents: [], // 미지의 물질 생성 시 저장용
+      quizData: [],              // 출제된 퀴즈 3문항
+      simEngine: null            // 시뮬레이션 엔진 인스턴스
+    };
+
+    // 라우팅 (뷰 전환)
+    const navigate = (nextView) => {
+      if (appState.view === 'sim' && appState.simEngine) {
+        appState.simEngine.pause(); // 시뮬레이션 화면을 떠날 때 일시정지
+      }
+
+      $$('.view-section').forEach(el => el.classList.remove('active'));
+      $(`#view-${nextView}`).classList.add('active');
+      appState.view = nextView;
+      
+      // History API 연동 (미리보기/blob 환경 SecurityError 방지)
+      if (window.history.state !== nextView) {
+        try {
+          window.history.pushState(nextView, '', `?view=${nextView}`);
+        } catch (e) {
+          console.warn('현재 환경에서는 History API URL 변경을 지원하지 않습니다.', e);
+        }
+      }
+
+      // 뷰 진입 후처리
+      if (nextView === 'sim') {
+        if (!appState.simEngine) {
+          appState.simEngine = new SimulationEngine('#simCanvas');
+        } else {
+          appState.simEngine.resume();
+          appState.simEngine.resize(); // 혹시 바뀐 크기 보정
+        }
+        // 첫 진입시 초기화
+        const activeBtn = $('.menu-btn.active');
+        if(activeBtn && !appState.simEngine.initialized) {
+            appState.simEngine.setScenario(activeBtn.dataset.type);
+            appState.simEngine.initialized = true;
+        }
+      } else if (nextView === 'report') {
+        generateQuiz();
+        loadFormData();
+      }
+    };
+
+    window.addEventListener('popstate', (e) => {
+      if (e.state && e.state !== appState.view) {
+        navigate(e.state);
+      }
+    });
+
+    window.addEventListener('visibilitychange', () => {
+      if (document.hidden && appState.simEngine) {
+        appState.simEngine.pause();
+      } else if (!document.hidden && appState.view === 'sim' && appState.simEngine) {
+        appState.simEngine.resume();
+      }
+    });
+
+    /* =====================================================================
+       2. 퀴즈 및 데이터 관리 로직
+       ===================================================================== */
+    const QUIZ_POOL = [
+      { q: "녹말을 검출할 때 사용하는 시약과 반응 후의 색깔은?", a: 0, 
+        options: ["아이오딘-아이오딘화 칼륨 용액, 청남색", "수단 III 용액, 선홍색", "베네딕트 용액, 황적색", "5% 수산화나트륨 용액, 보라색"], explain: "녹말은 아이오딘-아이오딘화 칼륨 용액과 반응하여 청남색을 나타냅니다." },
+      { q: "단백질을 검출하는 뷰렛 반응에 사용하는 시약은?", a: 1, 
+        options: ["베네딕트 용액", "5% 수산화 나트륨 용액 + 1% 황산 구리 용액", "수단 III 용액", "아이오딘-아이오딘화 칼륨 용액"], explain: "뷰렛 반응은 5% 수산화 나트륨 수용액과 1% 황산 구리 수용액을 섞어 사용합니다." },
+      { q: "지방을 검출할 때 사용하는 수단 III 용액의 반응 결과 색깔은?", a: 2, 
+        options: ["보라색", "청남색", "선홍색", "황적색"], explain: "수단 III 용액은 지방과 반응하여 선홍색으로 변합니다." },
+      { q: "베네딕트 용액으로 포도당을 검출할 때 반드시 필요한 추가 과정은?", a: 0, 
+        options: ["가열하기", "냉각하기", "자외선 쬐기", "강하게 흔들기"], explain: "베네딕트 반응은 반응 속도가 느려 반드시 가열을 해야 색 변화(황적색)를 명확히 볼 수 있습니다." },
+      { q: "밥(녹말)에 침(소화효소)을 섞어 충분한 시간이 지난 후, 베네딕트 용액을 넣고 가열하면 어떤 색이 될까요?", a: 3, 
+        options: ["청남색", "변화 없음", "선홍색", "황적색"], explain: "침 속의 아밀레이스가 녹말을 엿당(단맛이 나는 당분, 포도당과 유사한 반응)으로 분해하므로 베네딕트 반응(황적색)이 일어납니다." },
+      { q: "반투막 주머니 안에 녹말 용액을 넣고 비커의 물에 담가둔 뒤 시간이 지났을 때, 바깥쪽 비커 물에 아이오딘 용액을 떨어뜨리면 어떻게 될까요?", a: 0, 
+        options: ["색 변화가 없다.", "청남색으로 변한다.", "선홍색으로 변한다.", "황적색으로 변한다."], explain: "녹말은 분자 크기가 커서 반투막을 통과하지 못하므로 바깥쪽 물에서는 녹말이 검출되지 않습니다." }
+    ];
+
+    const generateQuiz = () => {
+      const container = $('#quiz-container');
+      if (container.children.length > 0) return; // 이미 생성됨
+
+      // 랜덤 3문제 셔플
+      const shuffled = [...QUIZ_POOL].sort(() => 0.5 - Math.random()).slice(0, 3);
+      appState.quizData = shuffled;
+
+      shuffled.forEach((q, idx) => {
+        const qDiv = document.createElement('div');
+        qDiv.className = 'quiz-item p-4 bg-gray-50 rounded-xl border border-gray-200';
+        
+        let optionsHtml = '';
+        q.options.forEach((opt, oIdx) => {
+          optionsHtml += `
+            <label class="flex items-start gap-3 p-3 mt-2 rounded-lg border border-gray-200 bg-white cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-colors">
+              <input type="radio" name="q${idx}" value="${oIdx}" class="mt-1 w-4 h-4 text-primary focus:ring-primary">
+              <span class="text-sm">${opt}</span>
+            </label>
+          `;
+        });
+
+        qDiv.innerHTML = `
+          <p class="font-bold text-sm text-gray-800 mb-2"><span class="text-primary mr-1">Q${idx + 1}.</span> ${q.q}</p>
+          <div class="space-y-2 mt-3">${optionsHtml}</div>
+          <div id="explain-q${idx}" class="hidden mt-3 text-xs bg-blue-50 text-blue-800 p-3 rounded-lg border border-blue-100"></div>
+        `;
+        container.appendChild(qDiv);
+      });
+    };
+
+    const saveFormData = () => {
+      const data = {
+        id: $('#stu-id').value,
+        name: $('#stu-name').value,
+        insight: $('#stu-insight').value
+      };
+      localStorage.setItem('nutri_form', JSON.stringify(data));
+    };
+
+    const loadFormData = () => {
+      try {
+        const data = JSON.parse(localStorage.getItem('nutri_form'));
+        if (data) {
+          $('#stu-id').value = data.id || '';
+          $('#stu-name').value = data.name || '';
+          $('#stu-insight').value = data.insight || '';
+        }
+      } catch(e){}
+    };
+    
+    // 입력 중 자동 저장
+    $('#stu-id').addEventListener('input', saveFormData);
+    $('#stu-name').addEventListener('input', saveFormData);
+    $('#stu-insight').addEventListener('input', saveFormData);
+
+    const submitReport = async () => {
+      const btn = $('#btn-submit');
+      const id = $('#stu-id').value.trim();
+      const name = $('#stu-name').value.trim();
+      const insight = $('#stu-insight').value.trim();
+      
+      if (!id || !name) {
+        showToast('학번과 이름을 입력해주세요.', true);
+        return;
+      }
+
+      // 미지의 물질 체크박스 수집
+      const guesses = Array.from($$('input[name="unknown-guess"]:checked')).map(el => el.parentElement.innerText.trim());
+      const guessStr = guesses.length > 0 ? guesses.join(', ') : '선택안함';
+
+      // 퀴즈 채점
+      let score = 0;
+      let allAnswered = true;
+      appState.quizData.forEach((q, idx) => {
+        const checked = $(`input[name="q${idx}"]:checked`);
+        const explainDiv = $(`#explain-q${idx}`);
+        if (!checked) {
+          allAnswered = false;
+        } else {
+          const userAns = parseInt(checked.value);
+          if (userAns === q.a) score++;
+          // 피드백 노출
+          explainDiv.classList.remove('hidden');
+          explainDiv.innerHTML = userAns === q.a ? 
+            `<strong>✅ 정답입니다!</strong><br>${q.explain}` : 
+            `<strong class="text-red-600">❌ 오답입니다.</strong><br>${q.explain}`;
+          explainDiv.className = userAns === q.a ? 
+            'mt-3 text-xs bg-emerald-50 text-emerald-800 p-3 rounded-lg border border-emerald-100' :
+            'mt-3 text-xs bg-red-50 text-red-800 p-3 rounded-lg border border-red-100';
+        }
+      });
+
+      if (!allAnswered) {
+        showToast('모든 퀴즈에 답해주세요.', true);
+        return;
+      }
+
+      // 제출 데이터 포맷
+      const payload = {
+        timestamp: new Date().toLocaleString('ko-KR'),
+        studentId: id,
+        studentName: name,
+        unknownGuess: guessStr,
+        insight: insight,
+        quizScore: `${score} / 3`
+      };
+
+      $('#result-summary').innerHTML = `퀴즈 점수: <strong class="text-primary text-lg">${score}</strong> / 3 점`;
+
+      if (!GOOGLE_SCRIPT_URL) {
+        // API 미설정 시 바로 완료 화면으로 (교사 테스트용)
+        localStorage.removeItem('nutri_form');
+        navigate('done');
+        return;
+      }
+
+      // GAS 전송
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 제출 중...`;
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8초 타임아웃
+        
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+          mode: 'no-cors' // GAS 특성상 no-cors 사용 (결과 응답은 opaque가 됨)
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // no-cors이므로 response.ok 체크 불가, 에러 안 났으면 성공으로 간주
+        localStorage.removeItem('nutri_form');
+        showToast('제출되었습니다.');
+        navigate('done');
+        
+      } catch (err) {
+        console.error(err);
+        showToast('네트워크 오류가 발생했습니다. 다시 시도해주세요.', true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '결과 제출하기';
+      }
+    };
+
+    const resetApp = () => {
+      $('#quiz-container').innerHTML = ''; // 퀴즈 초기화
+      $$('input[name="unknown-guess"]').forEach(el => el.checked = false);
+      if(appState.simEngine) {
+        appState.simEngine.setScenario('basic');
+        $$('.menu-btn').forEach(btn => btn.classList.remove('active'));
+        $('[data-type="basic"]').classList.add('active');
+      }
+      navigate('intro');
+    };
+
+    // 하단 메뉴 버튼 이벤트 바인딩
+    $$('.menu-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        $$('.menu-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        if (appState.simEngine) {
+          appState.simEngine.setScenario(e.target.dataset.type);
+          $('#sim-guide-overlay').style.display = 'none'; // 한 번 누르면 가이드 숨김
+        }
+      });
+    });
+
+<!-- SPLIT_HERE -->
+    /* =====================================================================
+       3. 물리 & 렌더링 시뮬레이션 엔진 (Canvas)
+       ===================================================================== */
+    
+    // 색상 정의 (상수)
+    const TUBE_C = 'rgba(241, 245, 249, 0.4)'; // 증류수 기본
+    const TUBE_MILK = 'rgba(255, 255, 255, 0.85)';
+    const STROKE_C = 'rgba(148, 163, 184, 0.6)';
+    
+    const REAGENT_C = {
+      iodine: 'rgba(139, 69, 19, 0.8)', // 갈색
+      naoh: 'rgba(255, 255, 255, 0.4)', // 투명
+      cuso4: 'rgba(59, 130, 246, 0.7)', // 파랑
+      sudan: 'rgba(220, 38, 38, 0.8)',  // 빨강
+      benedict: 'rgba(59, 130, 246, 0.7)', // 파랑
+      heater: 'rgba(251, 146, 60, 0.9)'  // 불꽃 베이스
+    };
+
+    const RESULT_C = {
+      starch: 'rgba(30, 58, 138, 0.9)', // 청남색
+      protein: 'rgba(147, 51, 234, 0.85)', // 보라색
+      fat: 'rgba(239, 68, 68, 0.85)', // 선홍색
+      glucose: 'rgba(249, 115, 22, 0.9)' // 황적색
+    };
+
+    // 선형 보간 (색상 전환 효과)
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const rgbaToArr = (rgbaStr) => {
+      let m = rgbaStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if(!m) return [255,255,255,1];
+      return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3]), m[4] === undefined ? 1 : parseFloat(m[4])];
+    };
+    const lerpColor = (c1, c2, t) => {
+      const a = rgbaToArr(c1);
+      const b = rgbaToArr(c2);
+      return `rgba(${Math.round(lerp(a[0], b[0], t))}, ${Math.round(lerp(a[1], b[1], t))}, ${Math.round(lerp(a[2], b[2], t))}, ${lerp(a[3], b[3], t)})`;
+    };
+
+    // 곡선(둥근 직사각형) 그리기 헬퍼
+    const roundRect = (ctx, x, y, width, height, radius) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+
+    // 시험관 클래스
+    class Tube {
+      constructor(index) {
+        this.index = index;
+        this.x = 0; this.y = 0;
+        this.w = 40; this.h = 130;
+        
+        // 상태
+        this.label = "";
+        this.hasMembrane = false;
+        this.contents = {}; // { starch, protein, fat, glucose, milk }
+        this.inner = {};
+        this.outer = {};
+        
+        this.reagents = { iodine: false, naoh: false, cuso4: false, sudan: false, benedict: false };
+        this.isHeated = false;
+        this.heatingProgress = 0; // 0 ~ 1
+        
+        this.currentColor = TUBE_C;
+        this.targetColor = TUBE_C;
+        
+        this.innerCurrentColor = TUBE_C;
+        this.innerTargetColor = TUBE_C;
+      }
+
+      reset(label, data, hasMembrane) {
+        this.label = label;
+        this.hasMembrane = hasMembrane || false;
+        if (hasMembrane) {
+          this.inner = data.inner || {};
+          this.outer = data.outer || {};
+        } else {
+          this.contents = data || {};
+        }
+        
+        this.reagents = { iodine: false, naoh: false, cuso4: false, sudan: false, benedict: false };
+        this.isHeated = false;
+        this.heatingProgress = 0;
+        
+        const baseC = (this.contents.milk || (hasMembrane && this.outer.milk)) ? TUBE_MILK : TUBE_C;
+        const innerBaseC = (hasMembrane && this.inner.milk) ? TUBE_MILK : 'rgba(255,255,255,0.4)';
+        
+        this.currentColor = baseC;
+        this.targetColor = baseC;
+        this.innerCurrentColor = innerBaseC;
+        this.innerTargetColor = innerBaseC;
+      }
+
+      addReagent(type) {
+        if (this.reagents[type]) return; // 이미 넣었으면 스킵
+        this.reagents[type] = true;
+        this.evalTargetColor();
+      }
+
+      heat(dt) {
+        if (!this.isHeated) {
+          this.heatingProgress += dt * 0.5; // 2초 가열
+          if (this.heatingProgress >= 1) {
+            this.heatingProgress = 1;
+            this.isHeated = true;
+            this.evalTargetColor();
+          }
+        }
+      }
+
+      evalTargetColor() {
+        const getCol = (c, r, isHeated) => {
+          // 반응 우선 (강한 색상 표출)
+          if (r.iodine && c.starch) return RESULT_C.starch;
+          if (r.naoh && r.cuso4 && c.protein) return RESULT_C.protein;
+          if (r.sudan && c.fat) return RESULT_C.fat;
+          if (r.benedict && c.glucose && isHeated) return RESULT_C.glucose;
+          
+          // 미반응 시 시약 기본색
+          if (r.benedict) return REAGENT_C.benedict;
+          if (r.iodine) return 'rgba(180,120,50,0.5)';
+          if (r.naoh && r.cuso4) return 'rgba(59,130,246,0.3)'; // 연한 파랑
+          if (r.cuso4) return 'rgba(59,130,246,0.2)';
+          if (r.sudan) return 'rgba(220,38,38,0.2)'; // 연한 빨강
+          
+          return c.milk ? TUBE_MILK : TUBE_C;
+        };
+
+        if (this.hasMembrane) {
+          this.innerTargetColor = getCol(this.inner, this.reagents, this.isHeated);
+          this.targetColor = getCol(this.outer, this.reagents, this.isHeated);
+        } else {
+          this.targetColor = getCol(this.contents, this.reagents, this.isHeated);
+        }
+      }
+
+      update(dt) {
+        this.currentColor = lerpColor(this.currentColor, this.targetColor, dt * 2);
+        if (this.hasMembrane) {
+          this.innerCurrentColor = lerpColor(this.innerCurrentColor, this.innerTargetColor, dt * 2);
+        }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // 라벨
+        ctx.fillStyle = '#475569';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.label, this.w/2, this.h + 20);
+
+        // 튜브 외곽
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, this.h - this.w/2);
+        ctx.arc(this.w/2, this.h - this.w/2, this.w/2, Math.PI, 0, true);
+        ctx.lineTo(this.w, 0);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = STROKE_C;
+        ctx.stroke();
+
+        // 안쪽 액체 클리핑
+        ctx.beginPath();
+        let lw = 2; // 선두께 고려
+        let lTop = this.h * 0.4; // 액체 높이
+        ctx.moveTo(lw, lTop);
+        ctx.lineTo(lw, this.h - this.w/2);
+        ctx.arc(this.w/2, this.h - this.w/2, this.w/2 - lw, Math.PI, 0, true);
+        ctx.lineTo(this.w - lw, lTop);
+        ctx.closePath();
+        
+        ctx.clip(); // 아래 그리는 것들은 튜브 안쪽에만 그려짐
+        
+        // 배경 액체
+        ctx.fillStyle = this.currentColor;
+        ctx.fill();
+
+        // 표면 반사 효과 (빛)
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(lw+2, lTop, this.w/3, this.h);
+
+        // 반투막 렌더링
+        if (this.hasMembrane) {
+          ctx.fillStyle = this.innerCurrentColor;
+          ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)'; // 셀로판 느낌의 노란 테두리
+          ctx.lineWidth = 1.5;
+          
+          let mWidth = this.w * 0.6;
+          let mHeight = this.h * 0.35;
+          let mX = (this.w - mWidth)/2;
+          let mY = lTop + 10;
+          
+          roundRect(ctx, mX, mY, mWidth, mHeight, 10);
+          ctx.fill();
+          ctx.stroke();
+          
+          // 반투막 안쪽 반사
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.fillRect(mX+2, mY+2, mWidth/3, mHeight-4);
+        }
+
+        ctx.restore();
+      }
+    }
+
+<!-- SPLIT_HERE -->
+    class Spoid {
+      constructor(type, label) {
+        this.type = type; // 'iodine', 'naoh', 'cuso4', 'sudan', 'benedict', 'heater'
+        this.label = label;
+        this.x = 0; this.y = 0;
+        this.origX = 0; this.origY = 0;
+        this.w = 30; this.h = 70;
+        
+        this.isDragging = false;
+        this.targetTube = null;
+        
+        // heater 속성
+        this.fireTime = 0;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if (this.type === 'heater') {
+          // 알콜램프 렌더링
+          this.w = 50; this.h = 60; // 램프 크기 변경
+          let lx = -this.w/2;
+          let ly = 0;
+          
+          // 몸통 (플라스크 형태)
+          ctx.beginPath();
+          ctx.moveTo(lx + this.w/2, ly + 10);
+          ctx.lineTo(lx + this.w - 5, ly + this.h);
+          ctx.lineTo(lx + 5, ly + this.h);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(200, 200, 200, 0.3)';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#333';
+          ctx.stroke();
+
+          // 액체 (알코올)
+          ctx.beginPath();
+          ctx.moveTo(lx + this.w/2 - 10, ly + 30);
+          ctx.lineTo(lx + this.w - 8, ly + this.h - 2);
+          ctx.lineTo(lx + 8, ly + this.h - 2);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+          ctx.fill();
+          
+          // 심지
+          ctx.fillStyle = '#444';
+          ctx.fillRect(lx + this.w/2 - 4, ly, 8, 15);
+          
+          // 불꽃 (가열 중이거나 드래그 중일 때 크게)
+          if (this.targetTube || this.isDragging) {
+            this.fireTime += 0.1;
+            let fx = lx + this.w/2;
+            let fy = ly;
+            let fh = 20 + Math.sin(this.fireTime)*5;
+            
+            // 바깥 불꽃
+            ctx.beginPath();
+            ctx.moveTo(fx, fy - fh);
+            ctx.quadraticCurveTo(fx + 10, fy - fh/2, fx + 6, fy);
+            ctx.lineTo(fx - 6, fy);
+            ctx.quadraticCurveTo(fx - 10, fy - fh/2, fx, fy - fh);
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.8)';
+            ctx.fill();
+            
+            // 안쪽 불꽃
+            ctx.beginPath();
+            ctx.moveTo(fx, fy - fh*0.6);
+            ctx.quadraticCurveTo(fx + 5, fy - fh*0.3, fx + 3, fy);
+            ctx.lineTo(fx - 3, fy);
+            ctx.quadraticCurveTo(fx - 5, fy - fh*0.3, fx, fy - fh*0.6);
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.9)';
+            ctx.fill();
+          }
+
+          // 라벨
+          ctx.fillStyle = '#333';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.label, 0, this.h + 15);
+
+        } else {
+          // 스포이드 + 시약병
+          this.w = 26; this.h = 60;
+          let hx = -this.w/2;
+          
+          // 병 몸통
+          ctx.beginPath();
+          roundRect(ctx, hx, 20, this.w, this.h - 20, 4);
+          ctx.fillStyle = 'rgba(241, 245, 249, 0.8)'; // 유리병
+          ctx.fill();
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#64748b';
+          ctx.stroke();
+
+          // 병 안의 액체
+          ctx.beginPath();
+          roundRect(ctx, hx+2, 35, this.w-4, this.h-37, 2);
+          ctx.fillStyle = REAGENT_C[this.type];
+          ctx.fill();
+
+          // 라벨 (흰 배경)
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillRect(hx+4, 40, this.w-8, 12);
+          
+          // 라벨 글자 (세로쓰기 대신 축약어)
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          let shortTxt = this.label.substring(0, 3);
+          ctx.fillText(shortTxt, 0, 46);
+
+          // 스포이드 고무 (머리)
+          if (!this.isDragging) {
+             // 꽂혀있는 상태
+             ctx.fillStyle = '#1e293b';
+             roundRect(ctx, hx+6, 0, 14, 15, 3);
+             ctx.fill();
+             // 스포이드 뚜껑 결합부
+             ctx.fillStyle = '#94a3b8';
+             ctx.fillRect(hx+4, 15, 18, 5);
+          } else {
+             // 드래그 중: 고무 + 유리관이 뽑혀 나옴
+             ctx.save();
+             // 마우스 중심이 고무쪽이 되게 약간 이동
+             ctx.translate(0, -30);
+             
+             // 유리관 (끝에 방울 맺힐 수 있음)
+             ctx.fillStyle = 'rgba(255,255,255,0.5)';
+             ctx.fillRect(-2, 15, 4, 30);
+             ctx.strokeStyle = '#94a3b8';
+             ctx.strokeRect(-2, 15, 4, 30);
+             
+             // 관 안의 액체
+             ctx.fillStyle = REAGENT_C[this.type];
+             ctx.fillRect(-1, 25, 2, 15);
+
+             // 고무 머리
+             ctx.fillStyle = '#1e293b';
+             roundRect(ctx, -7, 0, 14, 15, 3);
+             ctx.fill();
+             
+             // 뚜껑부
+             ctx.fillStyle = '#94a3b8';
+             ctx.fillRect(-9, 15, 18, 5);
+
+             ctx.restore();
+          }
+
+          // 병 이름 (아래)
+          if(!this.isDragging && !this.targetTube) {
+             ctx.fillStyle = '#333';
+             ctx.font = '10px sans-serif';
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'top';
+             ctx.fillText(this.label, 0, this.h + 5);
+          }
+        }
+
+        ctx.restore();
+      }
+    }
+
+<!-- SPLIT_HERE -->
+    class Particle {
+      constructor(x, y, color, isBubble = false) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.isBubble = isBubble;
+        this.r = isBubble ? Math.random() * 2 + 1 : 3;
+        this.vx = isBubble ? (Math.random() - 0.5) * 1 : 0;
+        this.vy = isBubble ? -Math.random() * 2 - 1 : 4; // 방울은 떨어지고, 기포는 올라감
+        this.life = 1;
+        this.decay = isBubble ? 0.02 + Math.random()*0.02 : 0;
+      }
+      
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if(this.isBubble) {
+           this.vx += (Math.random() - 0.5) * 0.5; // 좌우 진동
+           this.life -= this.decay;
+        } else {
+           this.vy += 0.2; // 중력
+        }
+      }
+      
+      draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    class SimulationEngine {
+      constructor(canvasId) {
+        this.canvas = $(canvasId);
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // 퍼포먼스
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        
+        this.tubes = [];
+        this.spoids = [];
+        this.particles = [];
+        
+        this.draggingSpoid = null;
+        this.lastTime = performance.now();
+        this.isRunning = true;
+        this.initialized = false;
+        
+        this.setupEntities();
+        this.initEvents();
+        
+        // ResizeObserver
+        this.ro = new ResizeObserver(() => this.resize());
+        this.ro.observe(this.canvas.parentElement);
+        this.resize(); // 초기 동기화 1회 호출
+        
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+      }
+
+      setupEntities() {
+        for(let i=0; i<5; i++) {
+          this.tubes.push(new Tube(i));
+        }
+        
+        const spoidDefs = [
+          { type: 'iodine', label: '아이오딘' },
+          { type: 'naoh', label: 'NaOH' },
+          { type: 'cuso4', label: 'CuSO4' },
+          { type: 'sudan', label: '수단 III' },
+          { type: 'benedict', label: '베네딕트' },
+          { type: 'heater', label: '알콜램프' }
+        ];
+        
+        spoidDefs.forEach(def => {
+          this.spoids.push(new Spoid(def.type, def.label));
+        });
+      }
+
+      setScenario(type) {
+        this.particles = []; // 진행중 애니메이션 초기화
+        this.spoids.forEach(s => { s.targetTube = null; s.x = s.origX; s.y = s.origY; });
+        
+        const basicTubes = [
+          { label: '녹말', membrane: false, data: { starch: true } },
+          { label: '단백질', membrane: false, data: { protein: true } },
+          { label: '지방', membrane: false, data: { fat: true } },
+          { label: '포도당', membrane: false, data: { glucose: true } },
+          { label: '증류수', membrane: false, data: {} }
+        ];
+
+        let config = [];
+
+        switch(type) {
+          case 'basic': config = basicTubes; break;
+          case 'starch': config = Array(4).fill({ label: '녹말', data: { starch: true }}).concat([basicTubes[4]]); break;
+          case 'protein': config = Array(4).fill({ label: '단백질', data: { protein: true }}).concat([basicTubes[4]]); break;
+          case 'fat': config = Array(4).fill({ label: '지방', data: { fat: true }}).concat([basicTubes[4]]); break;
+          case 'glucose': config = Array(4).fill({ label: '포도당', data: { glucose: true }}).concat([basicTubes[4]]); break;
+          case 'milk': config = Array(4).fill({ label: '우유', data: { protein: true, fat: true, glucose: true, milk: true }}).concat([basicTubes[4]]); break;
+          
+          case 'saliva':
+            config = [
+              { label: '물+녹말', data: { starch: true } },
+              { label: '끓인침+녹말', data: { starch: true } }, // 효소 파괴
+              { label: '침+녹말', data: { glucose: true } },  // 소화됨
+              { label: '침+녹말', data: { glucose: true } },
+              basicTubes[4]
+            ];
+            break;
+            
+          case 'membrane':
+            config = [
+              { label: '녹말+반투막', membrane: true, data: { inner: { starch: true }, outer: {} } },
+              { label: '녹말+반투막', membrane: true, data: { inner: { starch: true }, outer: {} } },
+              { label: '포도당+반투막', membrane: true, data: { inner: { glucose: true }, outer: { glucose: true } } }, // 포도당은 통과
+              { label: '포도당+반투막', membrane: true, data: { inner: { glucose: true }, outer: { glucose: true } } },
+              basicTubes[4]
+            ];
+            break;
+            
+          case 'all':
+            config = Array(4).fill({ label: '모든 영양소', data: { starch: true, protein: true, fat: true, glucose: true }}).concat([basicTubes[4]]);
+            break;
+            
+          case 'unknown':
+            // 미지의 물질 생성
+            const r = () => Math.random() > 0.5;
+            let uData = { starch: r(), protein: r(), fat: r(), glucose: r() };
+            // 최소 1개는 있도록
+            if (!uData.starch && !uData.protein && !uData.fat && !uData.glucose) uData.glucose = true; 
+            
+            // 정답 기록용
+            let ans = [];
+            if(uData.starch) ans.push('녹말');
+            if(uData.protein) ans.push('단백질');
+            if(uData.fat) ans.push('지방');
+            if(uData.glucose) ans.push('포도당');
+            appState.unknownActualContents = ans;
+            console.log("미지의 물질 정답:", ans);
+            
+            config = Array(4).fill({ label: '미지의 물질', data: uData }).concat([basicTubes[4]]);
+            break;
+        }
+
+        this.tubes.forEach((t, i) => {
+          const c = config[i];
+          t.reset(c.label, c.data, c.membrane);
+        });
+      }
+
+<!-- SPLIT_HERE -->
+      resize() {
+        const parent = this.canvas.parentElement;
+        const rect = parent.getBoundingClientRect();
+        
+        // 캔버스 크기가 0이면 무시
+        if (rect.width === 0 || rect.height === 0) return;
+        
+        this.w = rect.width;
+        this.h = rect.height;
+        this.canvas.width = this.w * this.dpr;
+        this.canvas.height = this.h * this.dpr;
+        this.ctx.scale(this.dpr, this.dpr);
+        
+        this.layout();
+      }
+
+      layout() {
+        const isMobile = this.w < 640;
+        
+        // 튜브 배치 (하단)
+        const tW = 44; 
+        const totalGap = this.w - (tW * 5);
+        const margin = totalGap / 6;
+        
+        for(let i=0; i<5; i++) {
+          let tx = margin + i * (tW + margin);
+          let ty = this.h - 170; // 하단에서 적당히 띄움
+          this.tubes[i].x = tx;
+          this.tubes[i].y = ty;
+          this.tubes[i].w = tW;
+        }
+
+        // 스포이드 배치 (상단 혹은 우측)
+        // 모바일은 상단에 작게 2줄, PC는 상단 1줄
+        const sW = 26;
+        const sTotalGap = this.w - (sW * 6);
+        const sMargin = sTotalGap / 7;
+        
+        for(let i=0; i<6; i++) {
+          let sx, sy;
+          if (isMobile) {
+            // 모바일 3x2 배열 (화면 상단)
+            let col = i % 3;
+            let row = Math.floor(i / 3);
+            let mGap = (this.w - (sW * 3)) / 4;
+            sx = mGap + col * (sW + mGap) + sW/2; // 중심좌표
+            sy = row * 80 + 40;
+          } else {
+            // PC 1열
+            sx = sMargin + i * (sW + sMargin) + sW/2;
+            sy = 50;
+          }
+          
+          this.spoids[i].origX = sx;
+          this.spoids[i].origY = sy;
+          if (!this.spoids[i].isDragging && !this.spoids[i].targetTube) {
+            this.spoids[i].x = sx;
+            this.spoids[i].y = sy;
+          }
+        }
+      }
+
+      initEvents() {
+        const getPos = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          let x, y;
+          if (e.touches && e.touches.length > 0) {
+            x = e.touches[0].clientX - rect.left;
+            y = e.touches[0].clientY - rect.top;
+          } else {
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
+          }
+          return { x, y };
+        };
+
+        const down = (e) => {
+          e.preventDefault(); // 터치 간섭 방지
+          const { x, y } = getPos(e);
+          
+          // 거꾸로 순회하여 위에 그려진 것 먼저 선택
+          for(let i=this.spoids.length-1; i>=0; i--) {
+            let s = this.spoids[i];
+            // Hit test (간단히 AABB + 여유공간)
+            let hx = s.x - s.w;
+            let hy = s.y;
+            let hw = s.w * 2;
+            let hh = s.h;
+            if (s.type === 'heater') {
+               hx = s.x - s.w/2; hw = s.w; hh = s.h;
+            }
+            
+            if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh + 20) {
+              s.isDragging = true;
+              s.targetTube = null; // 드래그 시작하면 목표 해제
+              this.draggingSpoid = s;
+              // 최상단 렌더링을 위해 배열 끝으로 이동
+              this.spoids.push(this.spoids.splice(i, 1)[0]);
+              break;
+            }
+          }
+        };
+
+        const move = (e) => {
+          if(!this.draggingSpoid) return;
+          e.preventDefault();
+          const { x, y } = getPos(e);
+          this.draggingSpoid.x = x;
+          this.draggingSpoid.y = y;
+        };
+
+        const up = (e) => {
+          if(!this.draggingSpoid) return;
+          e.preventDefault();
+          const s = this.draggingSpoid;
+          s.isDragging = false;
+          this.draggingSpoid = null;
+
+          // 드롭 체크 (튜브와의 충돌 판정)
+          let dropped = false;
+          for(let i=0; i<this.tubes.length; i++) {
+            let t = this.tubes[i];
+            // 튜브 영역 판정
+            if (s.x > t.x - 20 && s.x < t.x + t.w + 20 && s.y > t.y - 100 && s.y < t.y + t.h + 20) {
+              // 드롭 성공
+              dropped = true;
+              s.targetTube = t;
+              
+              if (s.type === 'heater') {
+                // 램프는 튜브 밑에 위치
+                s.x = t.x + t.w/2;
+                s.y = t.y + t.h;
+                s.fireTime = 0;
+                
+                // 가열 시작 애니메이션 후 원위치
+                setTimeout(() => {
+                  if (s.targetTube === t) {
+                    s.targetTube = null;
+                    this.returnSpoid(s);
+                  }
+                }, 2500);
+              } else {
+                // 일반 시약은 튜브 위에 위치
+                s.x = t.x + t.w/2;
+                s.y = t.y - 40;
+                
+                // 액체 떨어지는 파티클 생성
+                let dropCount = 0;
+                let dropInterval = setInterval(() => {
+                  this.particles.push(new Particle(s.x, s.y + 15, REAGENT_C[s.type]));
+                  dropCount++;
+                  if (dropCount >= 3) {
+                    clearInterval(dropInterval);
+                    // 시약 첨가 로직 호출 후 원위치
+                    setTimeout(() => {
+                      if (s.targetTube === t) {
+                        t.addReagent(s.type);
+                        s.targetTube = null;
+                        this.returnSpoid(s);
+                      }
+                    }, 500); // 방울 떨어지는 시간 대기
+                  }
+                }, 150);
+              }
+              break;
+            }
+          }
+          
+          if (!dropped) {
+            this.returnSpoid(s);
+          }
+        };
+
+        this.canvas.addEventListener('mousedown', down, { passive: false });
+        this.canvas.addEventListener('mousemove', move, { passive: false });
+        window.addEventListener('mouseup', up);
+
+        this.canvas.addEventListener('touchstart', down, { passive: false });
+        this.canvas.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('touchend', up);
+      }
+
+      returnSpoid(s) {
+        // 부드럽게 돌아가는 애니메이션은 루프 내에서 처리하기 위해 변수 셋팅
+        s.returning = true;
+      }
+
+<!-- SPLIT_HERE -->
+      update(dt) {
+        // 스포이드 복귀 로직
+        this.spoids.forEach(s => {
+          if (s.returning) {
+            s.x = lerp(s.x, s.origX, 10 * dt);
+            s.y = lerp(s.y, s.origY, 10 * dt);
+            // 도착 판정
+            if (Math.abs(s.x - s.origX) < 1 && Math.abs(s.y - s.origY) < 1) {
+              s.x = s.origX;
+              s.y = s.origY;
+              s.returning = false;
+            }
+          }
+          
+          // 램프 가열 중 튜브 상태 및 기포 업데이트
+          if (s.type === 'heater' && s.targetTube) {
+            s.targetTube.heat(dt);
+            // 기포 생성 (튜브 안에)
+            if (Math.random() < 0.3) {
+              let t = s.targetTube;
+              let bx = t.x + 5 + Math.random() * (t.w - 10);
+              let by = t.y + t.h - 10;
+              this.particles.push(new Particle(bx, by, 'rgba(255,255,255,0.6)', true));
+            }
+          }
+        });
+
+        // 튜브 색상 업데이트
+        this.tubes.forEach(t => t.update(dt));
+
+        // 파티클 업데이트
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          let p = this.particles[i];
+          p.update();
+          
+          // 바닥에 닿거나 수명이 다하면 제거
+          if (p.isBubble) {
+            // 기포는 위로 가다가 액체 표면(튜브 top + h*0.4) 근처에서 소멸
+            // 정확한 튜브 판별은 비용상 생략하고 y축으로 판정
+            if (p.life <= 0) this.particles.splice(i, 1);
+          } else {
+            // 방울은 아래로
+            if (p.y > this.h || (p.vy > 0 && Math.random()<0.01)) { 
+               // 단순화: 튜브 바닥쯤 오면 삭제
+               this.particles.splice(i, 1);
+            }
+          }
+        }
+      }
+
+      draw() {
+        // 배경 초기화
+        this.ctx.fillStyle = '#f8fafc';
+        this.ctx.fillRect(0, 0, this.w, this.h);
+        
+        // 튜브 그리기
+        this.tubes.forEach(t => t.draw(this.ctx));
+        
+        // 파티클(방울/기포) 그리기
+        this.particles.forEach(p => p.draw(this.ctx));
+
+        // 스포이드(시약) 그리기
+        this.spoids.forEach(s => s.draw(this.ctx));
+      }
+
+      loop(now) {
+        if (!this.isRunning) return;
+        requestAnimationFrame(this.loop);
+        
+        const dt = (now - this.lastTime) / 1000;
+        this.lastTime = now;
+        
+        if (dt > 0.1) return; // 탭 전환 시 폭주 방지
+        
+        try {
+          this.update(dt);
+          this.draw();
+        } catch (e) {
+          console.error("Render Loop Error:", e);
+          this.pause();
+          $('#error-boundary').classList.remove('hidden');
+          $('#error-msg').textContent = e.toString();
+        }
+      }
+      
+      pause() { this.isRunning = false; }
+      resume() { 
+        this.isRunning = true; 
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.loop);
+      }
+    }
+  </script>
+</body>
+</html>
