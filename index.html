@@ -22,7 +22,9 @@
         extend: {
           fontFamily: { sans: ['Noto Sans KR', '-apple-system', 'sans-serif'] },
           colors: {
-            brand: { 50: '#ecfeff', 100: '#cffafe', 500: '#06b6d4', 600: '#0891b2', 900: '#164e63' },
+            /* 라이트모드: 네이처 에코 (싱그러운 그린 톤) */
+            brand: { 50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 500: '#22c55e', 600: '#16a34a', 900: '#14532d' },
+            /* 다크모드: 사이버 랩 (네온 시안/핑크 유지) */
             neon: { cyan: '#00f2fe', pink: '#ec4899' },
             space: { 800: '#131c31', 900: '#0b1120', 950: '#060a13' }
           },
@@ -43,8 +45,8 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     body {
-      background-color: #f8fafc;
-      color: #334155; 
+      background-color: #edf2ec; 
+      color: #3f4e4f; /* 눈이 편안한 짙은 잎새/브라운 톤 */
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       transition: background-color 0.3s ease, color 0.3s ease;
@@ -80,7 +82,7 @@
     @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
     .shake { animation: shake 0.3s ease-in-out 0s 2; }
     
-    #qrcode img, #qrcode canvas { margin: 0 auto; max-width: 100%; border-radius: 8px; }
+    #qrcode img, #qrcode canvas { margin: 0 auto; max-width: 100%; width: 100%; height: auto; border-radius: 8px; image-rendering: pixelated; }
   </style>
 
   <script>
@@ -138,7 +140,7 @@
     <span x-text="toast.message"></span>
   </div>
 
-  <div class="h-screen-safe flex flex-col w-full max-w-screen-md mx-auto relative overflow-hidden bg-white/50 dark:bg-space-950/40 backdrop-blur-sm ring-1 ring-slate-200 dark:ring-slate-800/50">
+  <div class="h-screen-safe flex flex-col w-full max-w-screen-xl mx-auto relative overflow-hidden bg-[#fdfcf9]/80 dark:bg-space-950/40 backdrop-blur-sm ring-1 ring-slate-200 dark:ring-slate-800/50">
     
     <!-- 사이드바 오버레이 -->
     <div x-show="isSidebarOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50" @click="isSidebarOpen = false; triggerTap()" x-cloak></div>
@@ -243,8 +245,8 @@
             </div>
           </template>
 
-          <!-- 앱 카드 그리드 -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <!-- 앱 카드 그리드 (PC 모니터에서 3~4열 반응형 지원) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2">
             <template x-for="app in displayedApps" :key="app.id">
               <div class="group bg-white dark:bg-space-800 rounded-2xl p-4 shadow-soft dark:shadow-none hover:shadow-float dark:hover:shadow-neon-cyan border border-slate-100 dark:border-slate-700/50 hover:border-brand-200 dark:hover:border-neon-cyan/50 transition-all duration-300 flex flex-col relative h-full">
                 
@@ -595,8 +597,8 @@
           <div class="flex flex-col w-full items-center p-6 text-center">
             <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3">📱</div>
             <h3 class="text-base font-bold mb-4 text-slate-800 dark:text-white break-keep leading-tight" x-text="modal.data?.name || ''"></h3>
-            <button @click="copyText($event, modal.data?.url); triggerTap()" class="bg-white dark:bg-white p-4 rounded-2xl shadow-float dark:shadow-[0_0_15px_rgba(255,255,255,0.2)] border border-slate-100 dark:border-white mb-5 flex flex-col items-center w-full max-w-[200px] hover:-translate-y-1 active:scale-95 transition-all" title="클릭하여 주소 복사">
-              <div id="qrcode" class="mb-3 w-full bg-white p-2 rounded-xl"></div>
+            <button @click="copyText($event, modal.data?.url); triggerTap()" class="bg-white dark:bg-white p-4 rounded-2xl shadow-float dark:shadow-[0_0_15px_rgba(255,255,255,0.2)] border border-slate-100 dark:border-white mb-5 flex flex-col items-center w-full max-w-[320px] sm:max-w-[400px] hover:-translate-y-1 active:scale-95 transition-all" title="클릭하여 주소 복사">
+              <div id="qrcode" class="mb-3 w-full bg-white p-2 rounded-xl flex justify-center"></div>
               <div class="bg-slate-50 text-slate-500 w-full text-center py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-100">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg> 주소 복사
               </div>
@@ -744,7 +746,7 @@ function doPost(e) {
 
         updateMetaColor() {
           const meta = document.getElementById('theme-color-meta');
-          if(meta) meta.setAttribute('content', this.isDarkMode ? '#0b1120' : '#f0f8ff');
+          if(meta) meta.setAttribute('content', this.isDarkMode ? '#0b1120' : '#f7f6f2');
         },
 
         init() {
@@ -925,7 +927,7 @@ function doPost(e) {
           this.openModal('qr', app);
           this.$nextTick(() => {
             const container = document.getElementById('qrcode'); container.innerHTML = '';
-            new QRCode(container, { text: app.url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M, colorDark: "#000000", colorLight: "#ffffff" });
+            new QRCode(container, { text: app.url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.L, colorDark: "#000000", colorLight: "#ffffff" });
           });
         },
         
