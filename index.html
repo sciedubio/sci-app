@@ -345,12 +345,11 @@
           </div>
         </template>
 
-        <!-- QR 코드 및 주소 복사 모달 -->
+        <!-- QR 코드 및 주소 복사 모달 (원클릭 박스형 복사 통합) -->
         <template x-if="modal.type === 'qr'">
           <div class="flex flex-col items-center w-full">
             <h3 class="text-2xl font-bold mb-2 text-black text-center" x-text="modal.data?.name || ''"></h3>
             
-            <!-- 주소 복사 버튼 (박스 전체를 클릭 가능하게 변경) -->
             <button @click="copyText($event, modal.data?.url)" class="bevel-btn w-full mb-6 p-2 text-xs font-sans text-left flex justify-between items-center bg-[#e5e5e5] hover:bg-white transition-colors group" title="클릭하여 주소 복사">
               <span class="truncate mr-2 text-gray-700" x-text="modal.data?.url || ''"></span>
               <span class="flex-shrink-0 bg-[#c6c6c6] px-2 py-1 text-[10px] font-bold border border-gray-400 group-hover:bg-blue-200 transition-colors">📋 복사</span>
@@ -451,7 +450,7 @@
 
   <script>
     // --- 글로벌 설정 변수 ---
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7VXpoTAxUc4woOz1NLyzHW3zJ0HGp6SgUnsKbJ11nkjqJf7CdMxzrlZj9ezj2BAg/exec"; // TODO: 앱스 스크립트 웹앱 주소 입력
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCLy0uYsCLRYn2ARZuWVF7bs-z2edBf5bsf_sdPTpyTTO3HmP_i9prjSz5ukNFLCU/exec"; // TODO: 실제 앱스 스크립트 웹앱 주소 입력
     const UNITS = ['1단원', '2단원', '3단원', '4단원', '5단원', '6단원', '7단원', '8단원'];
     const DEFAULT_CATEGORIES = ['중1 과학', '중2 과학', '중3 과학', '수업 영상', '공지/정보'];
     
@@ -466,7 +465,7 @@
     const setVH = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
     window.addEventListener('resize', setVH); setVH();
     
-    // 한국어 자연 정렬 헬퍼 (숫자 순서 꼬임 방지)
+    // 한국어 자연 정렬 헬퍼
     const naturalSort = (a, b) => new Intl.Collator('ko', { numeric: true, sensitivity: 'base' }).compare(a, b);
 
     document.addEventListener('alpine:init', () => {
@@ -482,13 +481,12 @@
         lastCategory: '중2 과학',
         lastUnit: '1단원',
         
-        // 백엔드 통신 및 동적 헤더 생성 앱스 스크립트 원본 코드
+        // 백엔드 통신 및 동시성 제어(LockService) 적용 앱스 스크립트 코드
         gasCodeText: `function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Apps');
   if(!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
   
-  // 비밀번호 인증 로직 (CORS 차단 방지를 위해 GET 파라미터로 분리)
   if (e && e.parameter && e.parameter.action === 'verify') {
     var settingsSheet = ss.getSheetByName('Settings');
     if (!settingsSheet) return ContentService.createTextOutput(JSON.stringify({result: 'error'})).setMimeType(ContentService.MimeType.JSON);
@@ -498,7 +496,6 @@
     return ContentService.createTextOutput(JSON.stringify({result: 'error', message: '비밀번호가 일치하지 않습니다.'})).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 전체 앱 데이터 읽어오기
   var data = sheet.getDataRange().getValues();
   if(data.length < 2) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
   var headers = data[0]; var result = [];
@@ -511,26 +508,32 @@
 }
 
 function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Apps');
-  if(!sheet) {
-    sheet = ss.insertSheet('Apps');
-    sheet.appendRow(['id', 'category', 'unit', 'name', 'url', 'emoji', 'isHidden', 'isHot', 'date', 'views', 'tags', 'openDate', 'order']);
-    sheet.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
-  }
-  var settingsSheet = ss.getSheetByName('Settings');
-  if(!settingsSheet) {
-    settingsSheet = ss.insertSheet('Settings');
-    settingsSheet.appendRow(['관리자 비밀번호', 'science123']);
-    settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#f4cccc');
-    settingsSheet.setColumnWidth(1, 150);
-  }
-  
+  var lock = LockService.getScriptLock();
   try {
+    lock.waitLock(10000); // 동시성 문제 방지 (최대 10초 대기)
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: '서버가 혼잡합니다. 잠시 후 다시 시도해주세요.' })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Apps');
+    if(!sheet) {
+      sheet = ss.insertSheet('Apps');
+      sheet.appendRow(['id', 'category', 'unit', 'name', 'url', 'emoji', 'isHidden', 'isHot', 'date', 'views', 'tags', 'openDate', 'order']);
+      sheet.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+    }
+    var settingsSheet = ss.getSheetByName('Settings');
+    if(!settingsSheet) {
+      settingsSheet = ss.insertSheet('Settings');
+      settingsSheet.appendRow(['관리자 비밀번호', 'science123']);
+      settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#f4cccc');
+      settingsSheet.setColumnWidth(1, 150);
+    }
+    
     var req = JSON.parse(e.postData.contents);
     var action = req.action; var data = req.data;
     
-    // JSON 키 기반 동적 헤더 생성
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var rowData = [];
     if(action === 'create' || action === 'update') {
@@ -567,6 +570,8 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }`,
 
@@ -595,7 +600,6 @@ function doPost(e) {
             const res = await fetch(GOOGLE_SCRIPT_URL, { signal: controller.signal });
             clearTimeout(timeoutId);
             const data = await res.json();
-            // Boolean 및 정수 형변환 강제 처리
             this.apps = Array.isArray(data) ? data.map(app => ({
               ...app,
               isHidden: app.isHidden === true || app.isHidden === 'true',
@@ -612,7 +616,7 @@ function doPost(e) {
           }
         },
 
-        // 데이터 동기화 로직 (CRUD 및 조회수 증가)
+        // 데이터 동기화 (CRUD) 로직
         async syncAppAction(action, data) {
           if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "") {
             if(action === 'create') this.apps.push({ ...data, date: new Date().toISOString() });
@@ -662,7 +666,7 @@ function doPost(e) {
             }
           } catch(err) {
             console.error(err);
-            this.openModal('alert', '인증 통신 오류. 접속 URL과 배포 권한(모든 사용자)을 확인하세요.');
+            this.openModal('alert', '인증 오류. URL과 배포 권한(모든 사용자)을 확인하세요.');
           } finally {
             this.loading = false;
           }
@@ -671,7 +675,6 @@ function doPost(e) {
         goHome() { this.view = 'main'; this.searchQuery = ''; this.showFavoritesOnly = false; history.pushState({view: 'main'}, ''); },
         goAdmin() { this.view = 'admin'; history.pushState({view: 'admin'}, ''); },
         
-        // 동적 분류 리스트 생성
         get allCategories() { return Array.from(new Set([...DEFAULT_CATEGORIES, ...this.apps.map(a=>a.category).filter(Boolean)])).sort(naturalSort); },
         get allUnits() { return Array.from(new Set([...UNITS, ...this.apps.map(a=>a.unit).filter(Boolean)])).sort(naturalSort); },
         get studentAvailableUnits() {
@@ -683,14 +686,12 @@ function doPost(e) {
           return ['전체', ...Array.from(new Set(this.apps.filter(a => a.category === this.adminCategoryFilter).map(a => a.unit))).sort(naturalSort)];
         },
         
-        // 조회수 상위 3개 추출 함수
         get top3ViewsIds() {
           return [...this.apps].filter(a => !a.isHidden && (a.views||0) > 0).sort((a,b) => b.views - a.views).slice(0,3).map(a=>a.id);
         },
         isAutoHot(app) { return this.top3ViewsIds.includes(app.id); },
         isFuture(dateStr) { return dateStr ? new Date(dateStr) > new Date() : false; },
 
-        // 필터링 및 우선순위 정렬 로직 (Order가 낮을수록 앞쪽 배치)
         get displayedApps() {
           let f = this.apps.filter(a => !a.isHidden && !this.isFuture(a.openDate));
           if (this.showFavoritesOnly) { f = f.filter(a => this.favorites.includes(a.id)); } 
@@ -736,8 +737,8 @@ function doPost(e) {
         openFormModal(app) {
           const isEdit = !!(app && app.id);
           this.formData = isEdit ? { ...app } : { 
-            category: this.lastCategory, // 마지막으로 작성한 대분류 기억
-            unit: this.lastUnit,         // 마지막으로 작성한 소분류 기억
+            category: this.lastCategory, 
+            unit: this.lastUnit,         
             name: '', url: '', emoji: '🧪', tags: '', isHidden: false, isHot: false, openDate: '', order: 999 
           };
           this.formError = ''; this.openModal('appForm');
@@ -753,7 +754,7 @@ function doPost(e) {
           
           const action = this.formData.id ? 'update' : 'create';
           if(action === 'create') { 
-            this.formData.id = 'app_' + Date.now().toString(); // 고유 ID 필수 발급!
+            this.formData.id = 'app_' + Date.now().toString(); 
             this.formData.views = 0; 
             this.formData.date = new Date().toISOString(); 
           }
@@ -762,7 +763,7 @@ function doPost(e) {
           const success = await this.syncAppAction(action, this.formData);
           if(success) { 
             if(action === 'create') {
-              this.lastCategory = this.formData.category; // 다음 등록을 위해 메모리에 저장
+              this.lastCategory = this.formData.category; 
               this.lastUnit = this.formData.unit;
             }
             localStorage.removeItem('draft_appData'); 
@@ -771,8 +772,8 @@ function doPost(e) {
         },
 
         openAppUrl(app) {
-          app.views = (app.views || 0) + 1; // 즉시 UI 반영
-          this.syncAppAction('incrementView', { id: app.id }); // 백그라운드 전송
+          app.views = (app.views || 0) + 1;
+          this.syncAppAction('incrementView', { id: app.id }); 
           window.open(app.url, '_blank');
         },
         
@@ -788,11 +789,11 @@ function doPost(e) {
           });
         },
         
-        // 공용 텍스트 복사 함수 (IFrame 우회 Fallback 완벽 적용)
+        // 공용 텍스트 복사 함수 (iOS 스크롤 점프 완벽 차단 폴백 적용)
         async copyText(e, textToCopy) {
           if (!textToCopy) return;
           const btn = e.currentTarget; 
-          const originalHTML = btn.innerHTML; // 기존 내부 엘리먼트 보존
+          const originalHTML = btn.innerHTML;
           
           try {
             if(navigator.clipboard && window.isSecureContext) {
@@ -801,10 +802,12 @@ function doPost(e) {
               throw new Error('Clipboard API Error');
             }
           } catch(err) {
-            // 구형 브라우저 및 샌드박스 차단 시 Fallback 로직
             const textArea = document.createElement("textarea");
             textArea.value = textToCopy;
-            textArea.style.position = "fixed"; textArea.style.left = "-999999px"; textArea.style.top = "0";
+            // 스크롤 튐 방지: absolute 처리 후 현재 scrollY 값 할당
+            textArea.style.position = "absolute"; 
+            textArea.style.left = "-999999px"; 
+            textArea.style.top = window.scrollY + "px";
             document.body.appendChild(textArea); textArea.focus(); textArea.select();
             try { 
               document.execCommand('copy'); 
