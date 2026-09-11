@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>과학 웹앱 허브</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2d3748">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧪</text></svg>">
+  
+  <!-- Galmuri Font (Retro Pixel Art Style) -->
+  <link href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css" rel="stylesheet">
+  
+  <!-- Required CDNs (Alpine & Tailwind) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { galmuri: ['Galmuri11', 'sans-serif'] },
+          colors: {
+            mc: {
+              bg: '#8b8b8b', borderLight: '#ffffff', borderDark: '#373737',
+              btn: '#c6c6c6', btnHover: '#dfdfdf', btnActive: '#8b8b8b', text: '#111111'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    body {
+      font-family: 'Galmuri11', sans-serif;
+      background-color: #2d3748;
+      background-image: 
+        linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%, #1f2937),
+        linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%, #1f2937);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      margin: 0;
+      color: white;
+      overflow-x: hidden;
+    }
+    .h-screen-safe { height: 100dvh; height: calc(var(--vh, 1vh) * 100); }
+    
+    .bevel-box { background-color: #c6c6c6; border: 4px solid; border-top-color: #ffffff; border-left-color: #ffffff; border-bottom-color: #373737; border-right-color: #373737; color: #111; image-rendering: pixelated; }
+    .bevel-btn { background-color: #c6c6c6; border: 4px solid; border-top-color: #ffffff; border-left-color: #ffffff; border-bottom-color: #373737; border-right-color: #373737; color: #111; cursor: pointer; user-select: none; }
+    .bevel-btn:active { border-top-color: #373737; border-left-color: #373737; border-bottom-color: #ffffff; border-right-color: #ffffff; padding-top: 2px; padding-left: 2px; }
+    .bevel-inset { background-color: #8b8b8b; border: 4px solid; border-top-color: #373737; border-left-color: #373737; border-bottom-color: #ffffff; border-right-color: #ffffff; color: white; }
+    
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: #8b8b8b; border-left: 2px solid #373737; }
+    ::-webkit-scrollbar-thumb { background: #c6c6c6; border: 2px solid #ffffff; border-bottom-color: #373737; border-right-color: #373737; }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    .animate-shake { animation: shake 0.3s ease-in-out; }
+  </style>
+</head>
+<body x-data="appData" @popstate.window="handlePopState($event)" @beforeunload.window="handleBeforeUnload($event)">
+  
+  <div class="h-screen-safe flex flex-col relative w-full overflow-hidden bg-mc-bg text-white mx-auto">
+    
+    <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 bg-black/60 z-50" @click="sidebarOpen = false" style="display: none;"></div>
+    
+    <div class="fixed inset-y-0 left-0 w-64 bg-[#c6c6c6] border-r-4 border-[#111] z-[60] transform transition-transform duration-300 flex flex-col"
+         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+      <div class="p-4 bg-[#8b8b8b] border-b-4 border-[#111] flex justify-between items-center" :style="`padding-top: max(16px, ${safeTop})`">
+        <h2 class="text-xl font-bold text-white drop-shadow-md">메뉴 선택</h2>
+        <button @click="sidebarOpen = false" class="bevel-btn px-2 py-1 bg-red-400 text-white font-bold min-h-[44px] min-w-[44px]">X</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+        <template x-for="cat in allCategories" :key="cat">
+          <button @click="selectCategory(cat)"
+                  class="py-3 px-4 font-bold text-left text-lg text-black transition-colors min-h-[44px]"
+                  :class="(!showFavoritesOnly && selectedCategory === cat) ? 'bevel-inset bg-blue-300 !text-white' : 'bevel-btn'">
+            <span x-text="cat"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <header class="sticky top-0 z-40 bg-[#2d3748] border-b-4 border-[#111] p-4 flex justify-between items-center" :style="`padding-top: max(16px, ${safeTop})`">
+      <div class="flex items-center gap-3">
+        <button @click="sidebarOpen = true" class="bevel-btn p-2 flex flex-col gap-1 bg-[#c6c6c6] min-h-[44px] min-w-[44px] justify-center">
+          <div class="w-5 h-1 bg-black"></div>
+          <div class="w-5 h-1 bg-black"></div>
+          <div class="w-5 h-1 bg-black"></div>
+        </button>
+        <h1 class="text-xl min-[480px]:text-2xl font-bold text-white flex items-center gap-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] whitespace-nowrap cursor-pointer" @click="navigate('main')">
+          <span class="text-3xl">🧪</span> 과학 허브
+        </h1>
+      </div>
+      <div class="flex gap-2 relative">
+        <button @click="openModal('guide')" class="bevel-btn px-3 py-1 text-sm font-bold flex items-center whitespace-nowrap min-h-[44px]">⚙️</button>
+        <button x-show="view === 'main'" @click="openModal('password')" class="bevel-btn px-3 py-1 text-sm font-bold flex items-center whitespace-nowrap min-h-[44px]">🔒 관리</button>
+        <button x-show="view === 'admin'" @click="navigate('main')" class="bevel-btn px-3 py-1 text-sm font-bold flex items-center whitespace-nowrap bg-yellow-400 text-black min-h-[44px]" style="display: none;">🏠 홈</button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto relative z-10 w-full pb-24">
+      <div class="max-w-screen-xl mx-auto w-full h-full p-4">
+        
+        <main x-show="view === 'main'" class="flex flex-col gap-4 w-full h-full">
+          <div class="flex flex-col gap-3 mb-2 border-b-2 border-white/20 pb-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+              <span class="text-xl font-bold text-yellow-300 drop-shadow-md">
+                📂 <span x-text="showFavoritesOnly ? '⭐ 내 즐겨찾기' : selectedCategory"></span>
+              </span>
+              <button @click="toggleFavoritesMode()" class="px-3 py-1 text-sm font-bold transition-colors text-black min-h-[44px]" :class="showFavoritesOnly ? 'bevel-box bg-yellow-400' : 'bevel-btn bg-white'">
+                <span x-text="showFavoritesOnly ? '전체 보기로 돌아가기' : '⭐ 즐겨찾기 모아보기'"></span>
+              </button>
+            </div>
+            <input type="text" x-model="searchQuery" placeholder="🔍 앱 이름, 단원, 태그(#방탈출) 검색..." class="bevel-inset p-3 w-full text-black bg-white min-h-[44px] text-base focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </div>
+
+          <div x-show="!showFavoritesOnly && !searchQuery" class="flex flex-wrap gap-2 mb-4">
+            <template x-for="unit in studentAvailableUnits" :key="unit">
+              <button @click="selectedUnit = unit" class="px-3 py-1 text-sm font-bold transition-colors text-black min-h-[44px]" :class="selectedUnit === unit ? 'bevel-box bg-yellow-400' : 'bevel-btn'">
+                <span x-text="unit"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="app in displayedApps" :key="app.id">
+              <div class="bevel-box p-4 flex flex-col h-full bg-[#e5e5e5] hover:-translate-y-1 transition-transform relative text-black">
+                <button @click.stop="toggleFavorite(app.id)" class="absolute top-4 right-4 text-3xl drop-shadow-md transition-transform hover:scale-110 active:scale-90 min-h-[44px] min-w-[44px]" title="즐겨찾기 토글">
+                  <span x-text="favorites.includes(app.id) ? '⭐' : '☆'"></span>
+                </button>
+
+                <div class="flex justify-between items-start mb-4 pr-10">
+                  <div class="flex items-center gap-3 w-full">
+                    <div class="text-4xl p-2 bevel-inset bg-white drop-shadow-md relative">
+                      <span x-text="app.emoji"></span>
+                      <!-- HOT 배지 (수동 설정이거나 조회수 Top 3인 경우) -->
+                      <span x-show="app.isHot || topViewedAppIds.includes(app.id)" class="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-1 py-0.5 font-bold border-2 border-white rounded-md transform rotate-12 drop-shadow-sm">HOT</span>
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs bg-gray-700 text-white px-2 py-1 inline-block font-bold"><span x-text="app.category"></span> &gt; <span x-text="app.unit"></span></span>
+                        <span class="text-xs text-gray-600 font-bold flex items-center gap-1" title="조회수">👀 <span x-text="app.views || 0"></span></span>
+                      </div>
+                      <h3 class="font-bold text-lg leading-tight break-keep" x-text="app.name"></h3>
+                      
+                      <!-- 해시태그 목록 -->
+                      <div x-show="getTags(app.tags).length > 0" class="flex flex-wrap gap-1 mt-2">
+                        <template x-for="tag in getTags(app.tags)" :key="tag">
+                          <button @click="searchQuery = '#' + tag" class="text-[10px] bg-white border border-[#373737] px-1.5 py-0.5 font-bold hover:bg-yellow-200" x-text="'#' + tag"></button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-auto pt-2 flex gap-2">
+                  <div class="flex-shrink-0">
+                    <button @click="openQrModal(app)" class="bevel-btn bg-white p-1 hover:scale-105 transition-transform min-h-[44px] min-w-[44px] flex justify-center items-center">
+                      <span class="text-xl">🔲</span>
+                    </button>
+                  </div>
+                  <!-- OPEN 버튼 클릭 시 조회수 증가 트래킹 함수 호출 -->
+                  <button @click="handleAppOpen(app)" class="bevel-btn flex-1 py-2 text-lg font-bold flex justify-center items-center gap-2 bg-green-400 hover:bg-green-300 active:bg-green-500 text-black min-h-[44px]">
+                    ▶ OPEN
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div x-show="displayedApps.length === 0" class="col-span-full bevel-inset p-8 text-center text-white font-bold text-xl" style="display:none;">
+              <span x-text="searchQuery ? '검색 결과가 없습니다. 🪹' : '등록된 웹앱이 없습니다. 🪹'"></span>
+            </div>
+          </div>
+        </main>
+
+        <main x-show="view === 'admin'" class="flex flex-col gap-4 w-full h-full" style="display: none;">
+          <div class="flex justify-between items-end mb-4 flex-wrap gap-4">
+            <h2 class="text-2xl font-bold flex items-center gap-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+              <span class="text-3xl">🛠️</span> 관리자 패널
+            </h2>
+            <button @click="openAppForm(null)" class="bevel-btn bg-blue-400 px-6 py-2 font-bold flex items-center gap-2 text-black min-h-[44px]">
+              ➕ 새 웹앱 추가
+            </button>
+          </div>
+
+          <div class="flex flex-wrap gap-3 mb-2 p-3 bg-[#8b8b8b] bevel-inset items-center rounded-sm">
+            <span class="font-bold text-sm text-white drop-shadow-md mr-2">🔍 필터:</span>
+            <select x-model="adminCategoryFilter" @change="adminUnitFilter = '전체'" class="bevel-btn bg-white p-2 text-sm font-bold text-black min-h-[44px]">
+              <option value="전체">모든 대분류</option>
+              <template x-for="c in allCategories" :key="c">
+                <option :value="c" x-text="c"></option>
+              </template>
+            </select>
+            <select x-model="adminUnitFilter" class="bevel-btn bg-white p-2 text-sm font-bold text-black min-h-[44px]">
+              <template x-for="u in adminAvailableUnits" :key="u">
+                <option :value="u" x-text="u === '전체' ? '모든 소분류' : u"></option>
+              </template>
+            </select>
+            <div class="ml-auto text-xs font-bold bg-[#373737] text-white px-3 py-2 border-2 border-[#ffffff] border-b-[#111111] border-r-[#111111]">
+              총 <span x-text="adminDisplayedApps.length"></span>개
+            </div>
+          </div>
+
+          <div class="bevel-box overflow-x-auto bg-[#c6c6c6] p-2 text-black">
+            <table class="w-full text-sm text-left min-w-[800px]">
+              <thead class="bg-[#8b8b8b] text-white">
+                <tr>
+                  <th class="p-3 border-2 border-[#373737]">상태/조회</th>
+                  <th class="p-3 border-2 border-[#373737]">분류</th>
+                  <th class="p-3 border-2 border-[#373737]">앱 정보 (이모지/이름/태그/링크)</th>
+                  <th class="p-3 border-2 border-[#373737] text-center">관리</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white">
+                <template x-for="app in adminDisplayedApps" :key="app.id">
+                  <tr class="border-b-2 border-[#c6c6c6] hover:bg-gray-100" :class="app.isHidden ? 'opacity-50 bg-gray-200' : ''">
+                    <td class="p-3 border-2 border-[#373737] font-bold text-center space-y-1">
+                      <span class="block text-xs text-white rounded px-1" :class="app.isHidden ? 'bg-gray-500' : 'bg-green-500'" x-text="app.isHidden ? '비공개' : '공개'"></span>
+                      <span x-show="app.isHot" class="block text-xs bg-red-500 text-white rounded px-1 mt-1">🔥 HOT</span>
+                      <span x-show="isReserved(app.openDate)" class="block text-[10px] bg-purple-500 text-white rounded px-1 mt-1" x-text="'⏳ ' + app.openDate.replace('T', ' ')"></span>
+                      <div class="text-[10px] text-gray-600 mt-1">조회: <span x-text="app.views || 0"></span></div>
+                    </td>
+                    <td class="p-3 border-2 border-[#373737] font-bold">
+                      <div class="text-blue-700" x-text="app.category || '미지정'"></div>
+                      <div class="text-xs text-gray-600 mt-1" x-text="app.unit"></div>
+                    </td>
+                    <td class="p-3 border-2 border-[#373737]">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-2xl" x-text="app.emoji"></span>
+                        <span class="font-bold text-base" x-text="app.name"></span>
+                      </div>
+                      <div x-show="getTags(app.tags).length > 0" class="flex gap-1 mb-1">
+                        <template x-for="tag in getTags(app.tags)" :key="tag">
+                          <span class="text-[10px] bg-gray-200 px-1 rounded text-gray-700" x-text="'#' + tag"></span>
+                        </template>
+                      </div>
+                      <div class="text-xs font-normal text-blue-500 truncate max-w-[300px]" x-text="app.url"></div>
+                    </td>
+                    <td class="p-3 border-2 border-[#373737]">
+                      <div class="flex gap-2 justify-center">
+                        <button @click="openAppForm(app)" class="bevel-btn px-3 py-2 bg-yellow-300 text-xs font-bold text-black min-h-[44px]">수정</button>
+                        <button @click="openModal('confirmDelete', app)" class="bevel-btn px-3 py-2 bg-red-400 text-xs font-bold text-white min-h-[44px]">삭제</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="adminDisplayedApps.length === 0">
+                  <td colspan="4" class="p-4 text-center font-bold">데이터가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Footer & Loading -->
+    <footer class="text-center p-2 bg-[#2d3748] border-t-4 border-[#111] z-40 text-xs font-bold w-full" :style="`padding-bottom: max(8px, ${safeBottom})`">Created by Yang DH</footer>
+
+    <div x-show="loading" class="fixed inset-0 z-[200] bg-black/70 flex flex-col items-center justify-center backdrop-blur-sm" style="display: none;">
+      <div class="text-6xl animate-bounce drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">⛏️</div>
+      <div class="mt-4 text-white font-bold text-xl tracking-widest animate-pulse">블록 채굴 중...</div>
+    </div>
+
+    <div x-show="modal.type !== null" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" :style="`padding-bottom: max(16px, ${safeBottom})`" @click="closeModal()" style="display: none;">
+      <div class="bevel-box w-full max-w-md max-h-[90dvh] overflow-y-auto p-6 flex flex-col text-black bg-[#c6c6c6]" @click.stop :class="{'animate-shake': formErrorShake}">
+        
+        <!-- App Form Modal (Draft 저장 지원) -->
+        <div x-show="modal.type === 'appForm'" style="display: none;">
+          <div class="flex justify-between items-start mb-4">
+            <h3 class="text-xl font-bold" x-text="form.id ? '웹앱 수정' : '새 웹앱 추가'"></h3>
+            <span x-show="isFormDirty" class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded font-bold animate-pulse">임시저장됨</span>
+          </div>
+          
+          <div class="mb-4 flex gap-2">
+            <div class="flex-1">
+              <label class="text-sm font-bold mb-1 block">대분류</label>
+              <select x-model="form.category" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-sm focus:outline-none">
+                <template x-for="c in [...allCategories, '➕ 직접 입력']" :key="c"><option :value="c" x-text="c"></option></template>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="text-sm font-bold mb-1 block">소분류</label>
+              <select x-model="form.unit" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-sm focus:outline-none">
+                <template x-for="u in [...allUnits, '➕ 직접 입력']" :key="u"><option :value="u" x-text="u === '전체' && form.unit !== '전체' ? '전체' : u"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="mb-4" x-show="form.category === '➕ 직접 입력' || form.unit === '➕ 직접 입력'">
+            <input x-show="form.category === '➕ 직접 입력'" type="text" x-model.debounce.500ms="form.customCategory" placeholder="새 대분류" class="bevel-inset p-2 mb-2 w-full text-black bg-white focus:outline-none">
+            <input x-show="form.unit === '➕ 직접 입력'" type="text" x-model.debounce.500ms="form.customUnit" placeholder="새 소분류" class="bevel-inset p-2 w-full text-black bg-white focus:outline-none">
+          </div>
+
+          <div class="mb-4 flex gap-2">
+            <div class="w-1/4">
+              <label class="text-sm font-bold mb-1 block text-center">이모지</label>
+              <input type="text" maxlength="2" x-model.debounce.500ms="form.emoji" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-center text-xl focus:outline-none" placeholder="🔬">
+            </div>
+            <div class="w-3/4">
+              <label class="text-sm font-bold mb-1 block">앱 이름</label>
+              <input type="text" x-model.debounce.500ms="form.name" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-base focus:outline-none" placeholder="예: 화산 폭발 시뮬레이션">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="text-sm font-bold mb-1 block">URL 링크</label>
+            <input type="url" x-model.debounce.500ms="form.url" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-base focus:outline-none" placeholder="https://...">
+          </div>
+
+          <!-- 신규: 예약 공개 및 태그 기능 -->
+          <div class="mb-4">
+            <label class="text-sm font-bold mb-1 flex items-center justify-between">
+              <span>예약 공개일시 (선택)</span>
+              <span class="text-[10px] text-gray-600 bg-gray-200 px-1">입력 시 예약됨</span>
+            </label>
+            <input type="datetime-local" x-model.debounce.500ms="form.openDate" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-sm focus:outline-none">
+          </div>
+
+          <div class="mb-4">
+            <label class="text-sm font-bold mb-1 block">해시태그 (선택, 쉼표 구분)</label>
+            <input type="text" x-model.debounce.500ms="form.tags" class="bevel-inset p-2 w-full text-black bg-white min-h-[44px] text-sm focus:outline-none" placeholder="예: 방탈출, 물리, 퀴즈">
+          </div>
+
+          <div class="flex flex-col gap-2 mb-6 p-3 bevel-inset bg-[#e5e5e5]">
+            <label class="flex items-center gap-3 cursor-pointer select-none text-black">
+              <input type="checkbox" x-model="form.isHot" class="w-5 h-5 accent-red-500 min-w-[20px]">
+              <span class="font-bold text-sm">🔥 수동 HOT 배지 달기</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer select-none text-black">
+              <input type="checkbox" x-model="form.isHidden" class="w-5 h-5 accent-gray-600 min-w-[20px]">
+              <span class="font-bold text-sm">👁️ 비공개 (숨기기)</span>
+            </label>
+          </div>
+
+          <p x-show="formErrorMsg" class="text-red-600 text-sm font-bold mb-4" x-text="formErrorMsg"></p>
+
+          <div class="flex justify-end gap-2 mt-auto">
+            <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
+            <button @click="submitForm()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold min-h-[44px]">저장</button>
+          </div>
+        </div>
+
+        <!-- 기타 모달들 -->
+        <div x-show="modal.type === 'password'" style="display: none;">
+          <h3 class="text-xl font-bold mb-4">관리자 인증</h3>
+          <p class="mb-4 text-sm text-gray-700">비밀번호를 입력하세요.</p>
+          <input type="password" x-model="tempPassword" @keyup.enter="verifyPassword()" class="bevel-inset w-full p-3 mb-6 text-black min-h-[44px] text-base focus:outline-none">
+          <div class="flex justify-end gap-2 mt-auto">
+            <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
+            <button @click="verifyPassword()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold min-h-[44px]">확인</button>
+          </div>
+        </div>
+
+        <div x-show="modal.type === 'alert'" style="display: none;">
+          <h3 class="text-xl font-bold mb-4 text-red-600">알림</h3>
+          <p class="mb-6 break-keep" x-text="modal.data"></p>
+          <div class="flex justify-end mt-auto">
+            <button @click="closeModal()" class="bevel-btn px-6 py-2 bg-blue-400 font-bold min-h-[44px]">확인</button>
+          </div>
+        </div>
+
+        <div x-show="modal.type === 'confirmDelete'" style="display: none;">
+          <h3 class="text-xl font-bold mb-4 text-red-600">삭제 확인</h3>
+          <p class="mb-6 break-keep">정말 <b x-text="`[${modal.data?.name}]`"></b> 웹앱을 삭제하시겠습니까?</p>
+          <div class="flex justify-end gap-2 mt-auto">
+            <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
+            <button @click="deleteApp()" class="bevel-btn px-4 py-2 bg-red-400 font-bold text-white min-h-[44px]">삭제</button>
+          </div>
+        </div>
+
+        <div x-show="modal.type === 'qr'" class="flex flex-col items-center p-2" style="display: none;">
+          <h3 class="text-2xl font-bold mb-2 text-center" x-text="modal.data?.name"></h3>
+          <p class="mb-4 text-sm text-gray-700 bg-gray-200 p-2 break-all text-center" x-text="modal.data?.url"></p>
+          <div class="bg-white p-4 bevel-inset mb-6 flex justify-center items-center">
+            <!-- QR 200x200 렌더링 컨테이너 -->
+            <div id="qrcode-container"></div>
+          </div>
+          <button @click="closeModal()" class="bevel-btn w-full py-3 bg-red-400 font-bold text-lg min-h-[44px] text-white">닫기</button>
+        </div>
+
+        <div x-show="modal.type === 'guide'" style="display: none;">
+          <h3 class="text-xl font-bold mb-4 flex items-center gap-2">⚙️ DB 연동 가이드</h3>
+          <div class="bg-[#1e1e1e] text-[#d4d4d4] p-4 font-mono text-xs overflow-auto h-64 bevel-inset mb-4 text-left whitespace-pre" x-text="gasCodeText"></div>
+          <div class="text-[11px] space-y-1 mb-4 font-bold text-gray-800 break-keep">
+            <p class="text-red-600 bg-red-100 p-1 mb-2">🚨 중요: 새 기능을 위해 이전 코드를 모두 지우고 위 코드를 복사하여 재배포(새 배포) 해주세요!</p>
+            <p>1. 위 코드를 Apps Script 에디터에 붙여넣기</p>
+            <p>2. 우측 상단 [배포] > [새 배포] > '웹 앱', '모든 사용자'로 배포</p>
+            <p>3. 생성된 URL을 HTML 최상단 <b>GOOGLE_SCRIPT_URL</b> 에 교체</p>
+          </div>
+          <div class="flex justify-between mt-auto gap-2">
+            <button @click="copyGasCode($event.target)" class="bevel-btn flex-1 py-2 bg-green-400 font-bold min-h-[44px]">📄 코드 복사</button>
+            <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-red-400 font-bold text-white min-h-[44px]">닫기</button>
+          </div>
+        </div>
+
+        <div x-show="modal.type === 'confirmDiscard'" style="display: none;">
+          <h3 class="text-xl font-bold mb-4 text-orange-600">작성 중인 내용</h3>
+          <p class="mb-6 break-keep">저장하지 않고 뒤로 가시겠습니까? 임시 저장 내용은 유지됩니다.</p>
+          <div class="flex justify-end gap-2 mt-auto">
+            <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
+            <button @click="forceCloseForm()" class="bevel-btn px-4 py-2 bg-orange-400 font-bold text-white min-h-[44px]">뒤로가기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // TODO: 새로 배포하신 Apps Script 웹앱 URL을 아래 빈따옴표 안에 넣어주세요!
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpnZn4rm5mwsZ4RcobhYcmAY5LlzpXCd5o4bU4LbTWuaGSKOGZfx-9S0oaqbGB_BQ/exec"; 
+    const DRAFT_KEY = "science_hub_draft";
+    const FAV_KEY = "science_hub_favs";
+    
+    const DEFAULT_UNITS = ['1단원', '2단원', '3단원', '4단원', '5단원', '6단원', '7단원', '8단원'];
+    const DEFAULT_CATEGORIES = ['중1 과학', '중2 과학', '중3 과학', '수업 영상', '공지/정보'];
+
+    const DUMMY_DATA = [
+      { id: 'd1', category: '중2 과학', unit: '1단원', name: '원소 불꽃반응 실험', url: 'https://example.com/fire', emoji: '🔥', isHidden: false, isHot: false, views: 120, tags: '화학,실험', openDate: '', date: '2026-06-01' },
+      { id: 'd2', category: '중2 과학', unit: '2단원', name: '전자기 유도 발전기', url: 'https://example.com/elec', emoji: '⚡', isHidden: false, isHot: false, views: 45, tags: '물리,시뮬레이션', openDate: '', date: '2026-06-02' },
+      { id: 'd3', category: '중3 과학', unit: '3단원', name: '태양계 행성 크기 비교', url: 'https://example.com/space', emoji: '🪐', isHidden: false, isHot: false, views: 300, tags: '지구과학,우주', openDate: '', date: '2026-06-03' },
+      { id: 'd4', category: '중1 과학', unit: '4단원', name: '광합성 관찰 방탈출', url: 'https://example.com/plant', emoji: '🌿', isHidden: false, isHot: false, views: 12, tags: '생물,방탈출', openDate: '2026-12-31T09:00', date: '2026-06-04' }
+    ];
+
+    const naturalSort = (a, b) => new Intl.Collator('ko', { numeric: true, sensitivity: 'base' }).compare(a, b);
+
+    async function fallbackCopyTextToClipboard(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+        throw new Error("Clipboard API unavailable.");
+      } catch (err) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-999999px";
+        document.body.appendChild(textArea); textArea.focus(); textArea.select();
+        try { document.execCommand('copy'); textArea.remove(); return true; } catch (e) { textArea.remove(); return false; }
+      }
+    }
+
+    const setVH = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    window.addEventListener('resize', setVH); setVH();
+
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('appData', () => ({
+        view: 'main', apps: [], loading: false, sidebarOpen: false,
+        searchQuery: '', selectedCategory: '중2 과학', selectedUnit: '전체',
+        favorites: [], showFavoritesOnly: false,
+        modal: { type: null, data: null }, tempPassword: '', adminPw: '',
+        adminCategoryFilter: '전체', adminUnitFilter: '전체',
+        form: { category: '중2 과학', unit: '1단원', name: '', url: '', emoji: '🧪', isHidden: false, isHot: false, customCategory: '', customUnit: '', tags: '', openDate: '' },
+        formErrorMsg: '', formErrorShake: false, isFormDirty: false,
+        safeTop: '0px', safeBottom: '0px',
+
+        init() {
+          this.safeTop = 'env(safe-area-inset-top)'; this.safeBottom = 'env(safe-area-inset-bottom)';
+          try { const savedFavs = localStorage.getItem(FAV_KEY); if (savedFavs) this.favorites = JSON.parse(savedFavs); } catch(e) {}
+          
+          this.$watch('form', (value) => {
+            if (this.modal.type === 'appForm') {
+              this.isFormDirty = true;
+              localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
+            }
+          });
+          window.history.replaceState({ view: 'main', modal: null }, '');
+          this.fetchApps();
+        },
+
+        get allCategories() {
+          const currentCats = this.apps.map(a => a.category).filter(Boolean);
+          return Array.from(new Set([...DEFAULT_CATEGORIES, ...currentCats])).sort(naturalSort);
+        },
+        get allUnits() {
+          const currentUnits = this.apps.map(a => a.unit).filter(Boolean);
+          return Array.from(new Set([...DEFAULT_UNITS, ...currentUnits])).sort(naturalSort);
+        },
+        get studentAvailableUnits() {
+          const unitsInCat = this.apps.filter(a => a.category === this.selectedCategory && !a.isHidden).map(a => a.unit);
+          return ['전체', ...Array.from(new Set(unitsInCat)).sort(naturalSort)];
+        },
+        get adminAvailableUnits() {
+          if (this.adminCategoryFilter === '전체') return ['전체', ...this.allUnits];
+          const unitsInCat = this.apps.filter(a => a.category === this.adminCategoryFilter).map(a => a.unit);
+          return ['전체', ...Array.from(new Set(unitsInCat)).sort(naturalSort)];
+        },
+        
+        // 📊 조회수 기반 자동 HOT 아이디 추출 (Top 3)
+        get topViewedAppIds() {
+          const appsWithViews = this.apps.filter(a => !a.isHidden && !this.isReserved(a.openDate) && (Number(a.views) || 0) > 0);
+          const sortedViews = appsWithViews.map(a => Number(a.views)).sort((a,b)=>b-a);
+          if (sortedViews.length === 0) return [];
+          const threshold = sortedViews[Math.min(2, sortedViews.length - 1)]; 
+          return appsWithViews.filter(a => Number(a.views) >= threshold).map(a => a.id);
+        },
+
+        get displayedApps() {
+          let filtered = this.apps.filter(app => !app.isHidden);
+          
+          // ⏰ 예약 공개 필터링
+          filtered = filtered.filter(app => !this.isReserved(app.openDate));
+          
+          if (this.showFavoritesOnly) {
+            filtered = filtered.filter(app => this.favorites.includes(app.id));
+          } else {
+            filtered = filtered.filter(app => app.category === this.selectedCategory);
+            if (this.selectedUnit !== '전체') filtered = filtered.filter(app => app.unit === this.selectedUnit);
+          }
+          
+          // 🏷️ 실시간 및 태그 검색 기능
+          if (this.searchQuery.trim() !== '') {
+            const q = this.searchQuery.toLowerCase();
+            const rawQ = q.replace('#', '');
+            filtered = this.apps.filter(app => !app.isHidden && !this.isReserved(app.openDate) && (
+              app.name.toLowerCase().includes(q) || 
+              app.category.toLowerCase().includes(q) || 
+              app.unit.toLowerCase().includes(q) ||
+              (app.tags && app.tags.toLowerCase().includes(rawQ))
+            ));
+          }
+          return filtered;
+        },
+        get adminDisplayedApps() {
+          let filtered = this.apps;
+          if (this.adminCategoryFilter !== '전체') filtered = filtered.filter(a => a.category === this.adminCategoryFilter);
+          if (this.adminUnitFilter !== '전체') filtered = filtered.filter(a => a.unit === this.adminUnitFilter);
+          return filtered;
+        },
+
+        getTags(tagString) {
+          if (!tagString) return [];
+          return tagString.split(',').map(t => t.trim()).filter(Boolean);
+        },
+        isReserved(dateString) {
+          if (!dateString) return false;
+          return new Date(dateString) > new Date();
+        },
+
+        navigate(nextView) {
+          this.view = nextView;
+          window.history.pushState({ view: nextView, modal: null }, '');
+          this.searchQuery = ''; this.showFavoritesOnly = false;
+        },
+        selectCategory(cat) {
+          this.selectedCategory = cat; this.selectedUnit = '전체';
+          this.showFavoritesOnly = false; this.searchQuery = ''; this.sidebarOpen = false;
+        },
+        toggleFavoritesMode() {
+          this.showFavoritesOnly = !this.showFavoritesOnly; this.searchQuery = '';
+        },
+        toggleFavorite(id) {
+          if (this.favorites.includes(id)) this.favorites = this.favorites.filter(f => f !== id);
+          else this.favorites.push(id);
+          localStorage.setItem(FAV_KEY, JSON.stringify(this.favorites));
+        },
+        openModal(type, data = null) {
+          this.modal = { type, data }; this.tempPassword = '';
+          window.history.pushState({ view: this.view, modal: type }, '');
+        },
+        closeModal() {
+          if (this.modal.type === 'appForm' && this.isFormDirty) { this.modal.type = 'confirmDiscard'; return; }
+          this.modal = { type: null, data: null };
+          if (window.history.state?.modal) window.history.back();
+        },
+        forceCloseForm() {
+          this.isFormDirty = false; this.modal = { type: null, data: null };
+          if (window.history.state?.modal) window.history.back();
+        },
+        handlePopState(e) {
+          const state = e.state;
+          if (state?.modal) { this.modal.type = state.modal; } 
+          else {
+             if (this.modal.type === 'appForm' && this.isFormDirty) {
+                window.history.pushState({ view: this.view, modal: 'appForm' }, '');
+                this.modal.type = 'confirmDiscard';
+             } else {
+                this.modal.type = null; this.view = state?.view || 'main';
+             }
+          }
+        },
+        handleBeforeUnload(e) {
+          if (this.modal.type === 'appForm' && this.isFormDirty) { e.preventDefault(); e.returnValue = ''; }
+        },
+
+        openAppForm(appData) {
+          this.isFormDirty = false; this.formErrorMsg = '';
+          if (appData) {
+            this.form = { ...appData, customCategory: '', customUnit: '' };
+          } else {
+            try {
+              const draft = localStorage.getItem(DRAFT_KEY);
+              if (draft) { this.form = JSON.parse(draft); delete this.form.id; } 
+              else { this.form = { category: '중2 과학', unit: '1단원', name: '', url: '', emoji: '🧪', isHidden: false, isHot: false, customCategory: '', customUnit: '', tags: '', openDate: '' }; }
+            } catch(e) {
+              this.form = { category: '중2 과학', unit: '1단원', name: '', url: '', emoji: '🧪', isHidden: false, isHot: false, customCategory: '', customUnit: '', tags: '', openDate: '' };
+            }
+          }
+          this.openModal('appForm');
+        },
+        
+        // 🔲 QR 코드 200x200 생성 (오류 수정 M(15%))
+        openQrModal(app) {
+          this.openModal('qr', app);
+          this.$nextTick(() => {
+            const container = document.getElementById('qrcode-container');
+            if (container) {
+              container.innerHTML = '';
+              new window.QRCode(container, {
+                text: app.url,
+                width: 200, height: 200,
+                colorDark : "#000000", colorLight : "#ffffff",
+                correctLevel : window.QRCode.CorrectLevel.M 
+              });
+            }
+          });
+        },
+        triggerErrorShake(msg) {
+          this.formErrorMsg = msg; this.formErrorShake = false;
+          this.$nextTick(() => { this.formErrorShake = true; });
+        },
+        submitForm() {
+          const finalCategory = this.form.category === '➕ 직접 입력' ? this.form.customCategory.trim() : this.form.category;
+          const finalUnit = this.form.unit === '➕ 직접 입력' ? this.form.customUnit.trim() : this.form.unit;
+
+          if (!this.form.name.trim() || !this.form.url.trim() || !this.form.emoji.trim() || !finalCategory || !finalUnit) {
+            this.triggerErrorShake('모든 필수 필드를 입력해주세요.'); return;
+          }
+          if (!/^(https?:\/\/)/.test(this.form.url)) {
+            this.triggerErrorShake('URL은 http:// 또는 https:// 로 시작해야 합니다.'); return;
+          }
+
+          const payload = { ...this.form, category: finalCategory, unit: finalUnit === '전체' ? '전체' : finalUnit };
+          delete payload.customCategory; delete payload.customUnit;
+
+          this.syncAppAction(this.form.id ? 'update' : 'create', payload).then(success => {
+            if (success) { localStorage.removeItem(DRAFT_KEY); this.isFormDirty = false; this.closeModal(); }
+          });
+        },
+        async verifyPassword() {
+          if (!this.tempPassword) return;
+          const isValid = await this.syncAppAction('verify', null, this.tempPassword);
+          if (isValid) { this.adminPw = this.tempPassword; this.closeModal(); this.navigate('admin'); }
+        },
+        deleteApp() {
+          this.syncAppAction('delete', { id: this.modal.data.id }).then(success => { if (success) this.closeModal(); });
+        },
+
+        // 📊 조회수 트래킹 로직
+        handleAppOpen(app) {
+          window.open(app.url, '_blank');
+          
+          // 낙관적 UI 업데이트 (로컬에서 먼저 1 증가)
+          app.views = (Number(app.views) || 0) + 1;
+          this.apps = this.apps.map(a => a.id === app.id ? { ...a, views: app.views } : a);
+
+          // 서버에 조회수 증가 전송 (비밀번호 불필요, 에러 무시)
+          if (GOOGLE_SCRIPT_URL) {
+            fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST', mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'incrementView', data: { id: app.id } })
+            }).catch(() => {});
+          }
+        },
+
+        async fetchApps() {
+          if (!GOOGLE_SCRIPT_URL) { this.apps = DUMMY_DATA; return; }
+          this.loading = true;
+          try {
+            const res = await Promise.race([ fetch(GOOGLE_SCRIPT_URL), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000)) ]);
+            const data = await res.json();
+            this.apps = Array.isArray(data) ? data.map(app => ({
+              ...app,
+              isHidden: String(app.isHidden).toLowerCase() === 'true',
+              isHot: String(app.isHot).toLowerCase() === 'true',
+              views: Number(app.views) || 0
+            })) : [];
+          } catch(err) {
+            this.modal = { type: 'alert', data: '데이터 로딩 실패. 기본 예시 데이터를 표시합니다.' };
+            this.apps = DUMMY_DATA;
+          } finally { this.loading = false; }
+        },
+        async syncAppAction(action, data, overridePw = null) {
+          const pwToUse = overridePw !== null ? overridePw : this.adminPw;
+          if (!GOOGLE_SCRIPT_URL) {
+            if (action === 'verify') {
+              if (pwToUse === 'science123') return true;
+              this.modal = { type: 'alert', data: '임시 비밀번호는 science123 입니다.' }; return false;
+            }
+            if (action === 'create') this.apps.push({ ...data, id: Date.now().toString(), views: 0, date: new Date().toISOString() });
+            if (action === 'update') this.apps = this.apps.map(a => a.id === data.id ? data : a);
+            if (action === 'delete') this.apps = this.apps.filter(a => a.id !== data.id);
+            return true;
+          }
+          this.loading = true;
+          try {
+            await Promise.race([
+              fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action, data, password: pwToUse })
+              }),
+              new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+            ]);
+            if (action === 'verify') return true; 
+            await new Promise(r => setTimeout(r, 1000));
+            await this.fetchApps(); return true;
+          } catch(err) {
+            this.modal = { type: 'alert', data: '서버 통신 오류. 다시 시도해주세요.' }; return false;
+          } finally { this.loading = false; }
+        },
+
+        async copyGasCode(btn) {
+          const original = btn.innerText;
+          const success = await fallbackCopyTextToClipboard(this.gasCodeText);
+          btn.innerText = success ? '✅ 복사 완료!' : '❌ 복사 실패';
+          setTimeout(() => btn.innerText = original, 2000);
+        },
+        get gasCodeText() {
+          return `// 1. 기존 스프레드시트의 코드를 지우거나 새 시트를 만드세요.
+// 2. [배포] > [새 배포] > 유형: '웹 앱', 권한: '모든 사용자'
+
+const SHEET_NAME = 'Apps';
+
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if(!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  
+  var data = sheet.getDataRange().getValues();
+  if(data.length < 2) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  
+  var headers = data[0];
+  var result = [];
+  for(var i=1; i<data.length; i++) {
+    var obj = {};
+    for(var j=0; j<headers.length; j++) { obj[headers[j]] = data[i][j]; }
+    result.push(obj);
+  }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if(!sheet) sheet = ss.insertSheet(SHEET_NAME);
+
+  try {
+    var req = JSON.parse(e.postData.contents);
+    var action = req.action;
+    var data = req.data;
+    
+    // 🔥 1. 조회수 증가 액션 (비밀번호 검증 제외)
+    if (action === 'incrementView') {
+      var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+      var sheetData = sheet.getDataRange().getValues();
+      for(var i=1; i<sheetData.length; i++) {
+        if(sheetData[i][headers.indexOf('id')] === data.id) {
+          var viewCol = headers.indexOf('views') + 1;
+          if(viewCol > 0) {
+            var currentViews = Number(sheetData[i][viewCol-1]) || 0;
+            sheet.getRange(i+1, viewCol).setValue(currentViews + 1);
+          } else {
+            headers.push('views');
+            sheet.getRange(1, headers.length).setValue('views').setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+            sheet.getRange(i+1, headers.length).setValue(1);
+          }
+          break;
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 🔥 2. 관리자 액션 비밀번호 검증
+    var settingsSheet = ss.getSheetByName('Settings');
+    if(!settingsSheet) {
+      settingsSheet = ss.insertSheet('Settings');
+      settingsSheet.appendRow(['관리자 비밀번호', 'science123']);
+      settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#f4cccc');
+    }
+    var actualPassword = settingsSheet.getRange(1, 2).getValue().toString();
+    var inputPassword = (req.password || '').toString();
+    
+    if (inputPassword !== actualPassword) {
+      return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: '비밀번호 불일치' })).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'verify') return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
+
+    // 동적 헤더 생성
+    var headersRange = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1));
+    var headers = headersRange.getValues()[0];
+    if (headers.length === 1 && headers[0] === "") {
+        headers = ['id', 'timestamp'];
+        sheet.getRange(1, 1, 1, 2).setValues([headers]).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+    }
+
+    if (action === 'create' || action === 'update') {
+      for (var key in data) {
+        if (headers.indexOf(key) === -1) {
+          headers.push(key);
+          sheet.getRange(1, headers.length).setValue(key).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+        }
+      }
+      if (headers.indexOf('views') === -1) {
+          headers.push('views');
+          sheet.getRange(1, headers.length).setValue('views').setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+      }
+    }
+
+    if (action === 'create') {
+      var row = new Array(headers.length).fill("");
+      row[headers.indexOf('id')] = Utilities.getUuid();
+      row[headers.indexOf('timestamp')] = new Date().toISOString();
+      row[headers.indexOf('views')] = 0;
+      for(var key in data) {
+         var idx = headers.indexOf(key);
+         if(idx > -1) row[idx] = data[key];
+      }
+      sheet.appendRow(row);
+      
+    } else if (action === 'delete') {
+      var sheetData = sheet.getDataRange().getValues();
+      for(var i=1; i<sheetData.length; i++) {
+        if(sheetData[i][0] === data.id) { sheet.deleteRow(i+1); break; }
+      }
+    } else if (action === 'update') {
+      var sheetData = sheet.getDataRange().getValues();
+      for(var i=1; i<sheetData.length; i++) {
+        if(sheetData[i][headers.indexOf('id')] === data.id) {
+          for(var key in data) {
+             var colIdx = headers.indexOf(key) + 1;
+             if(colIdx > 0 && key !== 'id') sheet.getRange(i+1, colIdx).setValue(data[key]);
+          }
+          break;
+        }
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) { return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON); }
+}`;
+        }
+      }));
+    });
+  </script>
+</body>
+</html>
