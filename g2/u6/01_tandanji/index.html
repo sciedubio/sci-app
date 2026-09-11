@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>3대 영양소 칼로리 밸런서</title>
+    
+    <!-- PWA Icon (Data URI) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f172a'/><text y='60' x='50' font-size='50' text-anchor='middle' dominant-baseline='middle'>⚖️</text></svg>">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Required CDNs (Strict Versions) -->
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Noto Sans KR"', 'sans-serif'] },
+                    colors: {
+                        carb: '#10b981', // Emerald 500
+                        protein: '#ef4444', // Red 500
+                        fat: '#eab308', // Yellow 500
+                        bg_dark: '#0f172a'
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden; /* Prevent body scroll */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .h-screen-safe {
+            height: 100dvh;
+            height: calc(var(--vh, 1vh) * 100);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Safe area paddings for fixed headers/footers */
+        .safe-pt { padding-top: max(0.5rem, var(--safe-top)); }
+        .safe-pb { padding-bottom: max(1rem, var(--safe-bottom)); }
+
+        /* Canvas touch action rules */
+        canvas {
+            touch-action: none;
+            overscroll-behavior: contain;
+            display: block;
+        }
+
+        /* Scrollable panel rule */
+        .scrollable-panel {
+            touch-action: pan-y;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes scan-line {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .scanner-fx::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #38bdf8;
+            box-shadow: 0 0 10px #38bdf8;
+            animation: scan-line 3s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // iOS vh fallback
+        const setVH = () => {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        };
+        window.addEventListener('resize', setVH);
+        setVH();
+    </script>
+
+    <!-- Vanilla JS: Core Simulation Engine -->
+    <script>
+        class NutrientEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.width = 0;
+                this.height = 0;
+                this.pixelRatio = window.devicePixelRatio || 1;
+                
+                // State Data
+                this.data = {
+                    kcal: 0,
+                    carbRatio: 0, // 0~1
+                    proteinRatio: 0,
+                    fatRatio: 0,
+                    fatGrams: 0,
+                    hasVitamins: false,
+                    hasMinerals: false,
+                    hasWater: false,
+                    warning: false
+                };
+
+                // Visual Particles & Elements
+                this.fatBlobs = [];
+                this.energyParticles = [];
+                this.auraAngle = 0;
+                
+                this.resize();
+                
+                // Animation loop bindings
+                this.lastTime = 0;
+                this.frameId = null;
+                this.render = this.render.bind(this);
+            }
+
+            resize() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.width = rect.width;
+                this.height = rect.height;
+                this.canvas.width = this.width * this.pixelRatio;
+                this.canvas.height = this.height * this.pixelRatio;
+                this.ctx.scale(this.pixelRatio, this.pixelRatio);
+                
+                // Re-init specific geometric bounds based on new size
+                this.centerX = this.width / 2;
+                this.centerY = this.height / 2;
+                this.bodyHeight = Math.min(this.height * 0.6, 300);
+                this.bodyWidth = this.bodyHeight * 0.45;
+            }
+
+            start() {
+                if (!this.frameId) {
+                    this.lastTime = performance.now();
+                    this.frameId = requestAnimationFrame(this.render);
+                }
+            }
+
+            stop() {
+                if (this.frameId) {
+                    cancelAnimationFrame(this.frameId);
+                    this.frameId = null;
+                }
+            }
+
+            updateData(newData) {
+                this.data = { ...this.data, ...newData };
+                this.updateSystem();
+            }
+
+            updateSystem() {
+                // Adjust Fat Blobs based on fat amount (threshold > 20g)
+                const targetFatBlobs = Math.min(Math.floor(this.data.fatGrams / 5), 30);
+                
+                if (this.fatBlobs.length < targetFatBlobs) {
+                    for(let i=this.fatBlobs.length; i<targetFatBlobs; i++) {
+                        this.fatBlobs.push({
+                            x: this.centerX + (Math.random() - 0.5) * (this.bodyWidth + 20),
+                            y: this.centerY + this.bodyHeight*0.2 + (Math.random() - 0.5) * (this.bodyHeight * 0.4),
+                            r: 5 + Math.random() * 8,
+                            vx: (Math.random() - 0.5) * 0.5,
+                            vy: (Math.random() - 0.5) * 0.5
+                        });
+                    }
+                } else if (this.fatBlobs.length > targetFatBlobs) {
+                    this.fatBlobs.splice(targetFatBlobs);
+                }
+
+                // Add energy particles if total kcal > 0
+                if (this.data.kcal > 0 && Math.random() > 0.5 && this.energyParticles.length < 20) {
+                    this.energyParticles.push({
+                        x: this.centerX,
+                        y: this.centerY,
+                        angle: Math.random() * Math.PI * 2,
+                        speed: 1 + Math.random() * 2,
+                        life: 1.0
+                    });
+                }
+            }
+
+            drawStylizedBody(ctx, cx, cy, w, h) {
+                ctx.beginPath();
+                // Head
+                ctx.arc(cx, cy - h*0.4, w*0.35, 0, Math.PI*2);
+                // Torso
+                ctx.moveTo(cx - w*0.4, cy - h*0.2);
+                ctx.lineTo(cx + w*0.4, cy - h*0.2);
+                ctx.quadraticCurveTo(cx + w*0.5, cy + h*0.2, cx + w*0.3, cy + h*0.4);
+                ctx.lineTo(cx - w*0.3, cy + h*0.4);
+                ctx.quadraticCurveTo(cx - w*0.5, cy + h*0.2, cx - w*0.4, cy - h*0.2);
+                // Arms
+                ctx.moveTo(cx - w*0.5, cy - h*0.1);
+                ctx.quadraticCurveTo(cx - w*0.8, cy + h*0.1, cx - w*0.6, cy + h*0.3);
+                ctx.moveTo(cx + w*0.5, cy - h*0.1);
+                ctx.quadraticCurveTo(cx + w*0.8, cy + h*0.1, cx + w*0.6, cy + h*0.3);
+                
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Outline color based on water/vitamins (Regulatory)
+                const isRegulated = this.data.hasVitamins || this.data.hasMinerals || this.data.hasWater;
+                const isOverloaded = this.data.kcal > 2500;
+                
+                if (!isRegulated && this.data.kcal > 0) {
+                    // Warning state (needs regulatory nutrients)
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + Math.sin(this.auraAngle)*0.3})`; // Red glitchy
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 15;
+                } else {
+                    // Normal state
+                    ctx.strokeStyle = '#38bdf8'; // Light blue
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 10;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0; // reset
+            }
+
+            render(time) {
+                const dt = (time - this.lastTime) / 1000;
+                this.lastTime = time;
+                this.auraAngle += dt * 3;
+
+                // Clear
+                this.ctx.fillStyle = '#0f172a';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                // Background Grid
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                this.ctx.lineWidth = 1;
+                for(let i=0; i<this.width; i+=40) {
+                    this.ctx.beginPath(); this.ctx.moveTo(i, 0); this.ctx.lineTo(i, this.height); this.ctx.stroke();
+                }
+                for(let i=0; i<this.height; i+=40) {
+                    this.ctx.beginPath(); this.ctx.moveTo(0, i); this.ctx.lineTo(this.width, i); this.ctx.stroke();
+                }
+
+                if(this.width === 0) return; // Not ready
+
+                // 1. Draw Regulatory Aura (Vitamins, Minerals, Water)
+                if (this.data.hasVitamins || this.data.hasMinerals || this.data.hasWater) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.centerX, this.centerY, this.bodyHeight*0.6 + Math.sin(this.auraAngle)*10, 0, Math.PI*2);
+                    const grad = this.ctx.createRadialGradient(this.centerX, this.centerY, this.bodyHeight*0.4, this.centerX, this.centerY, this.bodyHeight*0.6 + 10);
+                    grad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+                    grad.addColorStop(1, 'rgba(56, 189, 248, 0.15)');
+                    this.ctx.fillStyle = grad;
+                    this.ctx.fill();
+                }
+
+                // 2. Draw Body Outline
+                this.drawStylizedBody(this.ctx, this.centerX, this.centerY, this.bodyWidth, this.bodyHeight);
+
+                // 3. Draw Muscle (Protein) Effect
+                if (this.data.proteinRatio > 0.1) {
+                    this.ctx.strokeStyle = `rgba(239, 68, 68, ${Math.min(this.data.proteinRatio * 2, 0.8)})`;
+                    this.ctx.lineWidth = 8;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.shadowColor = '#ef4444';
+                    this.ctx.shadowBlur = 10;
+                    
+                    // Left Arm muscle
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.centerX - this.bodyWidth*0.55, this.centerY - this.bodyHeight*0.05);
+                    this.ctx.lineTo(this.centerX - this.bodyWidth*0.65, this.centerY + this.bodyHeight*0.1);
+                    this.ctx.stroke();
+                    // Right Arm muscle
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.centerX + this.bodyWidth*0.55, this.centerY - this.bodyHeight*0.05);
+                    this.ctx.lineTo(this.centerX + this.bodyWidth*0.65, this.centerY + this.bodyHeight*0.1);
+                    this.ctx.stroke();
+                    this.ctx.shadowBlur = 0;
+                }
+
+                // 4. Draw Energy Core (Total Kcal)
+                if (this.data.kcal > 0) {
+                    const coreSize = Math.min(this.bodyWidth * 0.4 * (this.data.kcal / 2000), this.bodyWidth * 0.8);
+                    const isOver = this.data.kcal > 2400;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.centerX, this.centerY - this.bodyHeight*0.1, coreSize, 0, Math.PI*2);
+                    
+                    const cGrad = this.ctx.createRadialGradient(this.centerX, this.centerY - this.bodyHeight*0.1, 0, this.centerX, this.centerY - this.bodyHeight*0.1, coreSize);
+                    if (isOver) {
+                        cGrad.addColorStop(0, 'rgba(239, 68, 68, 0.8)'); // Red warning
+                        cGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                    } else {
+                        cGrad.addColorStop(0, 'rgba(16, 185, 129, 0.8)'); // Green healthy
+                        cGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+                    }
+                    this.ctx.fillStyle = cGrad;
+                    this.ctx.fill();
+                }
+
+                // 5. Draw Fat Blobs
+                this.ctx.fillStyle = '#eab308'; // Yellow
+                this.ctx.shadowColor = '#eab308';
+                this.ctx.shadowBlur = 5;
+                for (let b of this.fatBlobs) {
+                    // Wiggle
+                    b.x += b.vx;
+                    b.y += b.vy;
+                    // Constrain within lower torso
+                    const dx = b.x - this.centerX;
+                    const dy = b.y - (this.centerY + this.bodyHeight*0.2);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist > this.bodyWidth*0.4) {
+                        b.vx *= -1; b.vy *= -1;
+                        b.x += b.vx*2; b.y += b.vy*2;
+                    }
+                    this.ctx.beginPath();
+                    this.ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+                    this.ctx.fill();
+                }
+                this.ctx.shadowBlur = 0;
+
+                // 6. Draw Energy Particles (Metabolism)
+                for (let i = this.energyParticles.length - 1; i >= 0; i--) {
+                    let p = this.energyParticles[i];
+                    p.x += Math.cos(p.angle) * p.speed;
+                    p.y += Math.sin(p.angle) * p.speed;
+                    p.life -= dt * 1.5;
+                    
+                    if (p.life <= 0) {
+                        this.energyParticles.splice(i, 1);
+                    } else {
+                        this.ctx.fillStyle = `rgba(16, 185, 129, ${p.life})`;
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+                        this.ctx.fill();
+                    }
+                }
+
+                this.frameId = requestAnimationFrame(this.render);
+            }
+        }
+    </script>
+
+    <!-- React App -->
+    <script type="text/babel" data-presets="react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgkcrzvWvxz8-EgghqI7aXMUURumnt_P7eNWsRbLWUfC-H8_zmHXcFGoFRRceav8A/exec"; // ⚠️ 교사가 여기에 자신의 웹앱 URL을 입력해야 합니다.
+
+        const FOOD_DB = [
+            { id: 'riceball', name: '참치마요 삼각김밥', c: 38, p: 5, f: 8, v: false, m: false, w: true, icon: '🍙', desc: '탄수화물이 주성분! 빠른 에너지원.' },
+            { id: 'ramen', name: '컵라면', c: 65, p: 9, f: 16, v: false, m: true, w: true, icon: '🍜', desc: '탄수화물과 지방이 높고, 나트륨(무기질)이 많아요.' },
+            { id: 'cola', name: '콜라', c: 27, p: 0, f: 0, v: false, m: false, w: true, icon: '🥤', desc: '당류(탄수화물) 100%. 다른 영양소가 부족해요.' },
+            { id: 'chicken', name: '닭가슴살 소시지', c: 2, p: 22, f: 2, v: false, m: true, w: true, icon: '🌭', desc: '단백질 폭탄! 몸의 구성 성분(근육)을 만들어요. 뷰렛 반응 시 진한 보라색!' },
+            { id: 'chips', name: '감자칩', c: 32, p: 3, f: 20, v: false, m: true, w: false, icon: '🥔', desc: '탄수화물도 많지만, 기름(지방)에 튀겨 열량이 매우 높아요!' },
+            { id: 'salad', name: '편의점 샐러드', c: 8, p: 2, f: 0, v: true, m: true, w: true, icon: '🥗', desc: '열량은 낮지만, 몸을 조절하는 비타민, 무기질, 물이 풍부해요.' },
+            { id: 'milk', name: '흰 우유', c: 10, p: 6, f: 7, v: true, m: true, w: true, icon: '🥛', desc: '단백질과 지방, 그리고 뼈를 구성하는 칼슘(무기질)이 있어요.' }
+        ];
+
+        const QUIZ_POOL = [
+            { q: "탄수화물 1g은 체내에서 약 4kcal의 에너지를 낸다.", a: true, explain: "탄수화물과 단백질은 1g당 4kcal, 지방은 1g당 9kcal의 에너지를 냅니다." },
+            { q: "지방은 1g당 가장 많은 에너지를 내므로 무조건 많이 먹을수록 건강에 좋다.", a: false, explain: "지방은 효율적인 에너지원이지만, 과다 섭취 시 체지방으로 축적되어 비만의 원인이 됩니다." },
+            { q: "비타민과 무기질은 에너지를 내지 못하므로 먹지 않아도 생명 유지에 지장이 없다.", a: false, explain: "에너지는 내지 않지만, 몸의 생리 작용을 조절하는 필수적인 부영양소입니다." },
+            { q: "물은 우리 몸을 구성하는 성분 중 가장 많은 비율(약 60~70%)을 차지한다.", a: true, explain: "물은 체온 조절과 물질 운반 등 중요한 역할을 하며 몸의 대부분을 구성합니다." },
+            { q: "단백질 검출 실험(뷰렛 반응)에서 보라색으로 변하는 음식은 주로 밥이나 빵이다.", a: false, explain: "밥이나 빵은 탄수화물(녹말)이 주성분입니다. 단백질(고기, 달걀 등)이 뷰렛 반응에서 보라색으로 변합니다." },
+            { q: "주영양소(탄수화물, 단백질, 지방)는 모두 몸의 구성 성분으로 사용될 수 있다.", a: true, explain: "에너지원으로 쓰이는 동시에, 세포나 조직을 구성하는 성분으로도 사용됩니다." }
+        ];
+
+        // --- Custom Alert Modal Component ---
+        const AlertModal = ({ isOpen, title, message, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+                        <h3 className="text-xl font-bold mb-3 text-white">{title}</h3>
+                        <p className="text-slate-300 mb-6">{message}</p>
+                        <button onClick={onClose} className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-semibold transition-transform active:scale-95">
+                            확인
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const NutritionLabelModal = ({ food, onClose }) => {
+            if (!food) return null;
+            
+            const calC = food.c * 4;
+            const calP = food.p * 4;
+            const calF = food.f * 9;
+            const total = calC + calP + calF;
+
+            return (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl max-w-sm w-full text-black overflow-hidden shadow-2xl scanner-fx relative">
+                        <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
+                            <h3 className="font-bold text-lg flex items-center gap-2">
+                                🔍 영양성분표 스캐너
+                            </h3>
+                            <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                        </div>
+                        <div className="p-6">
+                            <div className="border-4 border-black p-4 bg-white">
+                                <h1 className="text-3xl font-black border-b-8 border-black pb-1 mb-2">영양정보</h1>
+                                <div className="text-lg font-bold border-b-4 border-black pb-1 mb-2 flex justify-between">
+                                    <span>{food.name}</span>
+                                    <span>총 {total} kcal</span>
+                                </div>
+                                
+                                <div className="flex justify-between py-1 border-b border-black">
+                                    <span className="font-bold text-carb">탄수화물 {food.c}g</span>
+                                    <span className="text-sm text-gray-600">({food.c}g &times; 4 = <strong className="text-black">{calC}kcal</strong>)</span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b border-black">
+                                    <span className="font-bold text-protein">단백질 {food.p}g</span>
+                                    <span className="text-sm text-gray-600">({food.p}g &times; 4 = <strong className="text-black">{calP}kcal</strong>)</span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b-[4px] border-black">
+                                    <span className="font-bold text-fat">지방 {food.f}g</span>
+                                    <span className="text-sm text-gray-600">({food.f}g &times; 9 = <strong className="text-black">{calF}kcal</strong>)</span>
+                                </div>
+                                
+                                <div className="mt-3 text-sm flex gap-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${food.v ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>비타민 {food.v?'O':'X'}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${food.m ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}>무기질 {food.m?'O':'X'}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${food.w ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-100 text-gray-400'}`}>물 {food.w?'O':'X'}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-4 bg-slate-100 p-3 rounded-lg text-sm text-slate-700">
+                                💡 <strong>탐정 노트:</strong> {food.desc}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('intro');
+            const [alertState, setAlertState] = useState({ isOpen: false, title: '', message: '' });
+            
+            // Simulation State
+            const [plate, setPlate] = useState({}); // { 'riceball': 1, ... }
+            
+            // Derived Stats
+            const stats = useMemo(() => {
+                let c=0, p=0, f=0, v=false, m=false, w=false;
+                Object.entries(plate).forEach(([id, qty]) => {
+                    if (qty > 0) {
+                        const food = FOOD_DB.find(item => item.id === id);
+                        c += food.c * qty;
+                        p += food.p * qty;
+                        f += food.f * qty;
+                        if(food.v) v = true;
+                        if(food.m) m = true;
+                        if(food.w) w = true;
+                    }
+                });
+                const calC = c * 4;
+                const calP = p * 4;
+                const calF = f * 9;
+                const totalKcal = calC + calP + calF;
+                
+                return {
+                    carbGrams: c, proteinGrams: p, fatGrams: f,
+                    carbKcal: calC, proteinKcal: calP, fatKcal: calF, totalKcal,
+                    hasV: v, hasM: m, hasW: w,
+                    carbRatio: totalKcal > 0 ? calC / totalKcal : 0,
+                    proteinRatio: totalKcal > 0 ? calP / totalKcal : 0,
+                    fatRatio: totalKcal > 0 ? calF / totalKcal : 0,
+                };
+            }, [plate]);
+
+            // Navigation Helper
+            const navigate = (nextView) => {
+                setView(nextView);
+                history.pushState({ view: nextView }, '');
+            };
+
+            const showAlert = (title, message) => {
+                setAlertState({ isOpen: true, title, message });
+            };
+
+            useEffect(() => {
+                history.replaceState({ view: 'intro' }, '');
+                const onPop = (e) => {
+                    const v = e.state?.view;
+                    const allowed = ['intro', 'simulation', 'report'];
+                    if (allowed.includes(v)) {
+                        setView(v);
+                    } else {
+                        setView('intro');
+                    }
+                };
+                window.addEventListener('popstate', onPop);
+                return () => window.removeEventListener('popstate', onPop);
+            }, []);
+
+            return (
+                <div className="h-screen-safe w-full text-slate-100 selection:bg-blue-500/30">
+                    {view === 'intro' && <IntroView navigate={navigate} />}
+                    {view === 'simulation' && <SimulationView navigate={navigate} plate={plate} setPlate={setPlate} stats={stats} showAlert={showAlert} />}
+                    {view === 'report' && <ReportView navigate={navigate} stats={stats} showAlert={showAlert} />}
+                    {view === 'done' && <DoneView navigate={navigate} />}
+                    
+                    <AlertModal 
+                        isOpen={alertState.isOpen} 
+                        title={alertState.title} 
+                        message={alertState.message} 
+                        onClose={() => setAlertState(prev => ({...prev, isOpen: false}))} 
+                    />
+                </div>
+            );
+        };
+
+        const IntroView = ({ navigate }) => {
+            const [showGuide, setShowGuide] = useState(false);
+
+            return (
+                <div className="flex flex-col items-center justify-center h-full p-6 relative safe-pt safe-pb bg-gradient-to-b from-slate-900 to-slate-800">
+                    <div className="flex-1 flex flex-col items-center justify-center max-w-md w-full">
+                        <div className="text-6xl mb-6 animate-pulse-glow">⚖️</div>
+                        <h1 className="text-3xl font-black text-center mb-4 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                            3대 영양소<br/>칼로리 밸런서
+                        </h1>
+                        <p className="text-slate-400 text-center mb-10 text-sm leading-relaxed">
+                            우리가 먹는 음식은 몸속에서 어떻게 쓰일까요?<br/>
+                            편의점 간식의 영양성분표를 분석하고,<br/>나만의 건강한 에너지 균형을 맞춰보세요!
+                        </p>
+                        
+                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 mb-8 w-full">
+                            <h3 className="font-bold text-sm text-slate-300 mb-2">실험 미션 🎯</h3>
+                            <ul className="text-xs text-slate-400 space-y-2 list-disc pl-4">
+                                <li><strong>4·4·9 공식:</strong> 주영양소의 열량을 계산하세요.</li>
+                                <li><strong>영양 탐정:</strong> 영양성분표 스캐너로 숨은 성분을 찾으세요.</li>
+                                <li><strong>몸속 변화 관찰:</strong> 지방 과다, 단백질 효과, 비타민의 조절 작용을 시각적으로 확인하세요.</li>
+                            </ul>
+                        </div>
+
+                        <button 
+                            onClick={() => navigate('simulation')}
+                            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-2xl text-white font-bold text-lg shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-transform active:scale-95"
+                        >
+                            실험 시작하기
+                        </button>
+                    </div>
+
+                    <div className="mt-auto text-center w-full">
+                        <button onClick={() => setShowGuide(true)} className="text-xs text-slate-500 hover:text-slate-300 mb-2 underline decoration-slate-600 underline-offset-4">
+                            ⚙️ DB 연동 가이드 (교사용)
+                        </button>
+                        <div className="text-xs text-slate-600 font-mono">Created by Yang DH</div>
+                    </div>
+
+                    {showGuide && <TeacherGuideModal onClose={() => setShowGuide(false)} />}
+                </div>
+            );
+        };
+
+        const SimulationView = ({ navigate, plate, setPlate, stats, showAlert }) => {
+            const canvasRef = useRef(null);
+            const engineRef = useRef(null);
+            const wrapperRef = useRef(null);
+            const [selectedFoodForLabel, setSelectedFoodForLabel] = useState(null);
+
+            // Initialize Engine
+            useEffect(() => {
+                if (!canvasRef.current || !wrapperRef.current) return;
+                
+                engineRef.current = new NutrientEngine(canvasRef.current);
+                
+                // Synchronous initial resize
+                engineRef.current.resize();
+                
+                const resizeObserver = new ResizeObserver(() => {
+                    if (engineRef.current) engineRef.current.resize();
+                });
+                resizeObserver.observe(wrapperRef.current);
+                
+                engineRef.current.start();
+
+                return () => {
+                    resizeObserver.disconnect();
+                    if (engineRef.current) engineRef.current.stop();
+                };
+            }, []);
+
+            // Update Engine Data when stats change
+            useEffect(() => {
+                if (engineRef.current) {
+                    engineRef.current.updateData({
+                        kcal: stats.totalKcal,
+                        carbRatio: stats.carbRatio,
+                        proteinRatio: stats.proteinRatio,
+                        fatRatio: stats.fatRatio,
+                        fatGrams: stats.fatGrams,
+                        hasVitamins: stats.hasV,
+                        hasMinerals: stats.hasM,
+                        hasWater: stats.hasW
+                    });
+                }
+            }, [stats]);
+
+            const handleModify = (id, delta) => {
+                setPlate(prev => {
+                    const current = prev[id] || 0;
+                    const next = Math.max(0, current + delta);
+                    return { ...prev, [id]: next };
+                });
+            };
+
+            const handleReset = () => {
+                setPlate({});
+            };
+
+            return (
+                <div className="h-full flex flex-col md:flex-row bg-slate-900 safe-pt safe-pb">
+                    {/* Header (Mobile & Desktop) */}
+                    <header className="w-full md:w-auto md:fixed md:top-0 md:left-0 md:right-0 md:z-10 h-14 flex items-center justify-between px-4 border-b border-slate-700/50 bg-slate-900/80 backdrop-blur shrink-0 safe-pt">
+                        <div className="font-bold text-emerald-400">🔬 영양 밸런서</div>
+                        <div className="flex gap-2">
+                            <button onClick={handleReset} className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-xs font-semibold">초기화</button>
+                            <button onClick={() => {
+                                if(stats.totalKcal === 0) {
+                                    showAlert("알림", "음식을 하나 이상 선택하여 실험을 진행해주세요.");
+                                    return;
+                                }
+                                navigate('report');
+                            }} className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-xs font-semibold shadow-lg shadow-blue-500/20 transition-transform active:scale-95">보고서 작성</button>
+                        </div>
+                    </header>
+
+                    {/* Main Layout */}
+                    <div className="flex-1 flex flex-col md:flex-row w-full mt-0 md:mt-14 overflow-hidden">
+                        
+                        {/* Canvas Area (Top on Mobile, Right on Desktop) */}
+                        <div ref={wrapperRef} className="relative w-full h-[40%] min-h-[260px] md:h-full md:flex-1 md:order-2 bg-black border-b md:border-b-0 md:border-l border-slate-700/50">
+                            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full"></canvas>
+                            
+                            {/* Overlay Stats on Canvas */}
+                            <div className="absolute top-2 left-2 right-2 flex justify-between pointer-events-none">
+                                <div className="glass-panel px-3 py-2 rounded-lg">
+                                    <div className="text-[10px] text-slate-400 mb-1">총 에너지 (목표: 2000kcal)</div>
+                                    <div className={`text-xl font-black ${stats.totalKcal > 2400 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        {stats.totalKcal} <span className="text-xs font-normal">kcal</span>
+                                    </div>
+                                </div>
+                                <div className="glass-panel px-3 py-2 rounded-lg flex flex-col gap-1 items-end">
+                                    <div className="flex gap-1">
+                                        <Badge active={stats.hasV} color="bg-blue-500">Vit</Badge>
+                                        <Badge active={stats.hasM} color="bg-indigo-500">Min</Badge>
+                                        <Badge active={stats.hasW} color="bg-cyan-500">H₂O</Badge>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-1">생리 기능 조절</div>
+                                </div>
+                            </div>
+                            
+                            {/* Warnings based on rules */}
+                            {stats.fatGrams > 30 && (
+                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-xs px-3 py-1 rounded-full backdrop-blur pointer-events-none animate-pulse">
+                                    ⚠️ 지방 과다: 체지방 축적
+                                </div>
+                            )}
+                            {!stats.hasV && !stats.hasM && stats.totalKcal > 1000 && (
+                                <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-500/20 border border-red-500/50 text-red-400 text-xs px-3 py-1 rounded-full backdrop-blur pointer-events-none">
+                                    ⚠️ 부영양소 부족: 신진대사 저하
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Control Panel (Bottom on Mobile, Left on Desktop) */}
+                        <div className="w-full h-[60%] md:h-full md:w-[400px] md:order-1 flex flex-col bg-slate-900 border-t md:border-t-0 border-slate-700/50">
+                            
+                            {/* Ratios Summary */}
+                            <div className="p-4 border-b border-slate-700/50 bg-slate-800/50 shrink-0">
+                                <div className="flex justify-between items-center mb-2">
+                                    <div className="text-xs font-bold text-slate-300">에너지 비율 (4·4·9)</div>
+                                </div>
+                                <div className="flex h-3 rounded-full overflow-hidden bg-slate-700 w-full">
+                                    <div style={{ width: `${stats.carbRatio * 100}%` }} className="bg-carb transition-all duration-300"></div>
+                                    <div style={{ width: `${stats.proteinRatio * 100}%` }} className="bg-protein transition-all duration-300"></div>
+                                    <div style={{ width: `${stats.fatRatio * 100}%` }} className="bg-fat transition-all duration-300"></div>
+                                </div>
+                                <div className="flex justify-between mt-2 text-[10px] md:text-xs text-slate-400 font-mono">
+                                    <span className="text-carb">탄 {stats.carbGrams}g ({stats.carbKcal}k)</span>
+                                    <span className="text-protein">단 {stats.proteinGrams}g ({stats.proteinKcal}k)</span>
+                                    <span className="text-fat">지 {stats.fatGrams}g ({stats.fatKcal}k)</span>
+                                </div>
+                            </div>
+
+                            {/* Food List */}
+                            <div className="flex-1 scrollable-panel p-2 space-y-2 pb-20 md:pb-4">
+                                <div className="text-xs text-slate-500 px-2 py-1">편의점 간식을 식판에 담아보세요. (이름을 눌러 영양정보 확인)</div>
+                                {FOOD_DB.map(food => {
+                                    const qty = plate[food.id] || 0;
+                                    return (
+                                        <div key={food.id} className="bg-slate-800 rounded-xl p-3 flex items-center gap-3 border border-slate-700">
+                                            <div className="text-2xl bg-slate-700/50 w-10 h-10 flex items-center justify-center rounded-lg shrink-0">
+                                                {food.icon}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <button onClick={() => setSelectedFoodForLabel(food)} className="text-left focus:outline-none flex flex-col group">
+                                                    <div className="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors flex items-center gap-1">
+                                                        {food.name} <span className="text-[10px] text-blue-500 bg-blue-500/10 px-1 rounded">🔍</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-500 truncate">
+                                                        탄{food.c} 단{food.p} 지{food.f}
+                                                    </div>
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0 bg-slate-900 rounded-lg p-1 border border-slate-700">
+                                                <button onClick={() => handleModify(food.id, -1)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white bg-slate-800 rounded active:scale-95 transition-transform">-</button>
+                                                <div className="w-4 text-center text-sm font-bold">{qty}</div>
+                                                <button onClick={() => handleModify(food.id, 1)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white bg-slate-800 rounded active:scale-95 transition-transform">+</button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    <NutritionLabelModal food={selectedFoodForLabel} onClose={() => setSelectedFoodForLabel(null)} />
+                </div>
+            );
+        };
+
+        const Badge = ({ active, color, children }) => (
+            <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold transition-all ${active ? `${color} text-white shadow-[0_0_8px_rgba(255,255,255,0.3)]` : 'bg-slate-700 text-slate-500'}`}>
+                {children}
+            </div>
+        );
+
+        const ReportView = ({ navigate, stats, showAlert }) => {
+            const [form, setForm] = useState({ studentId: '', studentName: '', goal: '', insight: '' });
+            const [quizAnswers, setQuizAnswers] = useState([null, null, null]);
+            const [quizFeedback, setQuizFeedback] = useState([null, null, null]);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            
+            // Randomly select 3 quizzes on mount
+            const selectedQuizzes = useMemo(() => {
+                const shuffled = [...QUIZ_POOL].sort(() => 0.5 - Math.random());
+                return shuffled.slice(0, 3);
+            }, []);
+
+            const handleQuiz = (index, answer) => {
+                if (quizAnswers[index] !== null) return; // Prevent re-answering
+                
+                const newAnswers = [...quizAnswers];
+                newAnswers[index] = answer;
+                setQuizAnswers(newAnswers);
+
+                const isCorrect = answer === selectedQuizzes[index].a;
+                const newFeedback = [...quizFeedback];
+                newFeedback[index] = {
+                    correct: isCorrect,
+                    text: isCorrect ? '정답입니다!' : '오답입니다.',
+                    explain: selectedQuizzes[index].explain
+                };
+                setQuizFeedback(newFeedback);
+            };
+
+            const submitData = async () => {
+                if (!form.studentId || !form.studentName || !form.goal || !form.insight) {
+                    showAlert("필수 항목 누락", "학번, 이름, 실험 목표, 식단 구성 이유를 모두 입력해주세요.");
+                    return;
+                }
+                if (quizAnswers.includes(null)) {
+                    showAlert("퀴즈 미완료", "3개의 OX 퀴즈를 모두 풀어주세요.");
+                    return;
+                }
+                if (!GOOGLE_SCRIPT_URL) {
+                    showAlert("설정 오류", "교사 가이드를 참고하여 GOOGLE_SCRIPT_URL을 설정해주세요.");
+                    return;
+                }
+
+                setIsSubmitting(true);
+                
+                const quizScore = quizFeedback.filter(f => f.correct).length;
+                
+                const payload = {
+                    timestamp: new Date().toLocaleString(),
+                    studentId: form.studentId,
+                    studentName: form.studentName,
+                    goal: form.goal,
+                    totalKcal: stats.totalKcal,
+                    carbRatio: Math.round(stats.carbRatio * 100) + '%',
+                    proteinRatio: Math.round(stats.proteinRatio * 100) + '%',
+                    fatRatio: Math.round(stats.fatRatio * 100) + '%',
+                    hasMicros: (stats.hasV||stats.hasM||stats.hasW) ? 'O' : 'X',
+                    quizScore: `${quizScore}/3`,
+                    insight: form.insight
+                };
+
+                try {
+                    const fetchPromise = fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+                    
+                    await Promise.race([fetchPromise, timeoutPromise]);
+                    navigate('done');
+                } catch (error) {
+                    showAlert("전송 실패", "네트워크 오류 또는 타임아웃이 발생했습니다. 다시 시도해주세요.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            return (
+                <div className="h-full bg-slate-900 scrollable-panel p-4 safe-pt safe-pb">
+                    <div className="max-w-2xl mx-auto space-y-6 pb-20">
+                        <div className="flex items-center gap-3 mb-6">
+                            <button onClick={() => navigate('simulation')} className="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
+                                ←
+                            </button>
+                            <h2 className="text-2xl font-bold">실험 보고서</h2>
+                        </div>
+
+                        {/* Summary Data */}
+                        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+                            <h3 className="font-bold text-slate-300 mb-4 flex items-center gap-2">📊 나의 영양 밸런스 결과</h3>
+                            <div className="grid grid-cols-2 gap-4 text-center">
+                                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                                    <div className="text-xs text-slate-400 mb-1">총 섭취 열량</div>
+                                    <div className="text-xl font-bold text-emerald-400">{stats.totalKcal} <span className="text-sm font-normal">kcal</span></div>
+                                </div>
+                                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 flex flex-col justify-center">
+                                    <div className="text-xs text-slate-400 mb-1">탄:단:지 비율</div>
+                                    <div className="text-sm font-bold flex justify-center gap-2">
+                                        <span className="text-carb">{Math.round(stats.carbRatio*100)}%</span>
+                                        <span className="text-protein">{Math.round(stats.proteinRatio*100)}%</span>
+                                        <span className="text-fat">{Math.round(stats.fatRatio*100)}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quiz Section */}
+                        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+                            <h3 className="font-bold text-slate-300 mb-4 flex items-center gap-2">📝 개념 확인 OX 퀴즈</h3>
+                            <div className="space-y-4">
+                                {selectedQuizzes.map((q, idx) => (
+                                    <div key={idx} className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                                        <p className="text-sm font-medium mb-3">Q{idx+1}. {q.q}</p>
+                                        <div className="flex gap-2 mb-2">
+                                            <button 
+                                                onClick={() => handleQuiz(idx, true)}
+                                                disabled={quizAnswers[idx] !== null}
+                                                className={`flex-1 py-2 rounded-lg font-bold text-lg transition-all ${quizAnswers[idx] === true ? 'bg-blue-600 text-white' : quizAnswers[idx] !== null ? 'bg-slate-800 text-slate-600 opacity-50' : 'bg-slate-700 hover:bg-slate-600 text-white active:scale-95'}`}
+                                            >O</button>
+                                            <button 
+                                                onClick={() => handleQuiz(idx, false)}
+                                                disabled={quizAnswers[idx] !== null}
+                                                className={`flex-1 py-2 rounded-lg font-bold text-lg transition-all ${quizAnswers[idx] === false ? 'bg-red-600 text-white' : quizAnswers[idx] !== null ? 'bg-slate-800 text-slate-600 opacity-50' : 'bg-slate-700 hover:bg-slate-600 text-white active:scale-95'}`}
+                                            >X</button>
+                                        </div>
+                                        {quizFeedback[idx] && (
+                                            <div className={`text-xs p-2 rounded mt-2 ${quizFeedback[idx].correct ? 'bg-blue-500/20 text-blue-300' : 'bg-red-500/20 text-red-300'}`}>
+                                                <strong>{quizFeedback[idx].text}</strong> {quizFeedback[idx].explain}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Student Info & Prescription */}
+                        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+                            <h3 className="font-bold text-slate-300 mb-4 flex items-center gap-2">🎯 나만의 식단 처방전</h3>
+                            <div className="flex gap-3 mb-4">
+                                <input type="text" placeholder="학번 (예: 10101)" value={form.studentId} onChange={e => setForm({...form, studentId: e.target.value})} className="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500" />
+                                <input type="text" placeholder="이름" value={form.studentName} onChange={e => setForm({...form, studentName: e.target.value})} className="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500" />
+                            </div>
+                            
+                            <div className="mb-4">
+                                <select 
+                                    value={form.goal} 
+                                    onChange={e => setForm({...form, goal: e.target.value})}
+                                    className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors text-slate-200"
+                                >
+                                    <option value="" disabled>이번 실험의 목표를 선택하세요</option>
+                                    <option value="💪 근육 빵빵 운동선수 식단">💪 근육 빵빵 운동선수 식단 (단백질 중심)</option>
+                                    <option value="🏃 가벼운 다이어트 식단">🏃 가벼운 다이어트 식단 (저열량 중심)</option>
+                                    <option value="🧠 두뇌 회전 벼락치기 식단">🧠 두뇌 회전 벼락치기 식단 (탄수화물 중심)</option>
+                                    <option value="⚖️ 완벽한 황금 밸런스 식단">⚖️ 완벽한 황금 밸런스 식단 (영양소 골고루)</option>
+                                </select>
+                            </div>
+
+                            <textarea 
+                                placeholder="선택한 목표를 달성하기 위해 어떤 간식들을 조합했나요? 각 영양소의 특징(에너지원, 몸 구성 등)을 포함하여 과학적인 이유를 적어주세요." 
+                                value={form.insight} 
+                                onChange={e => setForm({...form, insight: e.target.value})} 
+                                className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm h-32 resize-none focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500"
+                            ></textarea>
+                        </div>
+                        
+                        <button 
+                            onClick={submitData}
+                            disabled={isSubmitting}
+                            className={`w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform ${isSubmitting ? 'bg-slate-600 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 shadow-[0_0_20px_rgba(37,99,235,0.4)]'}`}
+                        >
+                            {isSubmitting ? '전송 중...' : '결과 제출하기'}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const DoneView = ({ navigate }) => (
+            <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-900 safe-pt safe-pb text-center">
+                <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 border-2 border-emerald-500">
+                    <span className="text-5xl">🎉</span>
+                </div>
+                <h2 className="text-3xl font-black text-white mb-4">제출 완료!</h2>
+                <p className="text-slate-400 mb-8 leading-relaxed">
+                    보고서가 성공적으로 전송되었습니다.<br/>
+                    (선생님의 구글 시트에서 확인 불가 시 안내)<br/>
+                    나의 영양소 밸런스를 잊지 마세요!
+                </p>
+                <button 
+                    onClick={() => navigate('intro')}
+                    className="px-8 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-semibold transition-transform active:scale-95"
+                >
+                    처음으로 돌아가기
+                </button>
+            </div>
+        );
+
+        // --- Teacher Guide Modal Component ---
+        const TeacherGuideModal = ({ onClose }) => {
+            const [copied, setCopied] = useState(false);
+            
+            const scriptCode = `function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000); 
+
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['시간', '학번', '이름', '목표', '총열량(kcal)', '탄수화물비율', '단백질비율', '지방비율', '부영양소포함', '퀴즈점수', '과학적이유']);
+      sheet.getRange(1, 1, 1, sheet.getLastColumn())
+           .setFontWeight('bold')
+           .setBackground('#4a86e8')
+           .setFontColor('#ffffff');
+    }
+
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      data.timestamp, data.studentId, data.studentName, data.goal,
+      data.totalKcal, data.carbRatio, data.proteinRatio, data.fatRatio, data.hasMicros,
+      data.quizScore, data.insight
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'error', error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}`;
+
+            const handleCopy = () => {
+                // Fallback for iframe sandbox
+                const textArea = document.createElement("textarea");
+                textArea.value = scriptCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) {
+                    console.error('Copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-800 rounded-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col shadow-2xl border border-slate-600">
+                        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80 rounded-t-2xl shrink-0">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">⚙️ DB 연동 가이드</h2>
+                            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">✕</button>
+                        </div>
+                        
+                        <div className="p-6 overflow-y-auto scrollable-panel flex-1 text-sm text-slate-300 space-y-5">
+                            <section>
+                                <h3 className="text-emerald-400 font-bold text-base mb-2">1. 구글 시트 준비</h3>
+                                <p>새 구글 스프레드시트를 생성하고 [확장 프로그램] - [Apps Script]를 클릭합니다.</p>
+                            </section>
+                            
+                            <section>
+                                <h3 className="text-emerald-400 font-bold text-base mb-2 flex justify-between items-center">
+                                    2. 코드 붙여넣기
+                                    <button onClick={handleCopy} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white transition-colors">
+                                        {copied ? '✅ 복사 완료' : '📋 코드 복사'}
+                                    </button>
+                                </h3>
+                                <div className="bg-slate-950 p-3 rounded-lg overflow-x-auto border border-slate-700">
+                                    <pre className="text-xs text-green-400 font-mono leading-relaxed"><code>{scriptCode}</code></pre>
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">※ LockService가 포함되어 여러 학생이 동시에 제출해도 누락되지 않습니다.</p>
+                            </section>
+
+                            <section>
+                                <h3 className="text-emerald-400 font-bold text-base mb-2">3. 웹 앱 배포</h3>
+                                <ol className="list-decimal pl-5 space-y-1">
+                                    <li>우측 상단 <strong>[배포]</strong> - <strong>[새 배포]</strong> 클릭</li>
+                                    <li>유형 선택(톱니바퀴) : <strong>웹 앱</strong></li>
+                                    <li>설명 : 적당한 이름 입력 (예: 영양소앱)</li>
+                                    <li>실행할 사용자 : <strong>나</strong></li>
+                                    <li>액세스 권한 : <strong>모든 사용자</strong></li>
+                                    <li><strong>[배포]</strong> 클릭 후 권한 검토 수락</li>
+                                    <li>발급된 <strong>웹 앱 URL</strong>을 복사합니다.</li>
+                                </ol>
+                            </section>
+
+                            <section>
+                                <h3 className="text-emerald-400 font-bold text-base mb-2">4. 앱에 URL 적용</h3>
+                                <p>복사한 URL을 이 HTML 파일의 최상단 스크립트 영역에 있는 <code className="bg-slate-700 px-1 rounded text-pink-300">GOOGLE_SCRIPT_URL</code> 변수에 붙여넣기 하세요.</p>
+                            </section>
+                        </div>
+                        
+                        <div className="p-4 border-t border-slate-700 bg-slate-800/80 rounded-b-2xl text-center shrink-0">
+                            <div className="text-xs text-slate-500 mb-2">학생들에게 배포 시, 브라우저 메뉴에서 '홈 화면에 추가'를 안내하면 PWA 앱처럼 사용할 수 있습니다.</div>
+                            <div className="text-xs text-slate-600 font-mono">Created by Yang DH</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
