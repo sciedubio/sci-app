@@ -5,35 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>과학 웹앱 허브</title>
   
-  <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#2d3748">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧪</text></svg>">
   
-  <!-- Galmuri Font (Retro Pixel Art Style) -->
   <link href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css" rel="stylesheet">
-  
-  <!-- Required CDNs (Alpine.js & Tailwind CSS) -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  
-  <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- Tailwind Config & Custom CSS -->
   <script>
+    const setVH = () => document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    window.addEventListener('resize', setVH);
+    setVH();
+
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: { galmuri: ['Galmuri11', 'sans-serif'] },
           colors: {
-            mc: { bg: '#8b8b8b', borderLight: '#ffffff', borderDark: '#373737', btn: '#c6c6c6', text: '#111111' }
+            mc: {
+              bg: '#8b8b8b', borderLight: '#ffffff', borderDark: '#373737',
+              btn: '#c6c6c6', btnHover: '#dfdfdf', btnActive: '#8b8b8b', text: '#111111'
+            }
           }
         }
       }
     }
   </script>
+
   <style>
     :root {
       --safe-top: env(safe-area-inset-top, 0px);
@@ -47,92 +48,66 @@
         linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%, #1f2937);
       background-size: 20px 20px;
       background-position: 0 0, 10px 10px;
-      margin: 0;
-      color: white;
-      overflow-x: hidden;
-      overscroll-behavior-y: none; /* Pull-to-refresh 방지 */
+      margin: 0; color: white; overflow-x: hidden;
     }
-    .h-screen-safe {
-      height: 100dvh;
-      height: calc(var(--vh, 1vh) * 100);
-    }
+    .h-screen-safe { height: 100dvh; height: calc(var(--vh, 1vh) * 100); }
     
-    /* Retro Bevel Box CSS */
     .bevel-box {
-      background-color: #c6c6c6;
-      border: 4px solid;
-      border-top-color: #ffffff;
-      border-left-color: #ffffff;
-      border-bottom-color: #373737;
-      border-right-color: #373737;
-      color: #111;
-      image-rendering: pixelated;
+      background-color: #c6c6c6; border: 4px solid;
+      border-top-color: #ffffff; border-left-color: #ffffff;
+      border-bottom-color: #373737; border-right-color: #373737;
+      color: #111; image-rendering: pixelated;
     }
     .bevel-btn {
-      background-color: #c6c6c6;
-      border: 4px solid;
-      border-top-color: #ffffff;
-      border-left-color: #ffffff;
-      border-bottom-color: #373737;
-      border-right-color: #373737;
-      color: #111;
-      cursor: pointer;
-      user-select: none;
+      background-color: #c6c6c6; border: 4px solid;
+      border-top-color: #ffffff; border-left-color: #ffffff;
+      border-bottom-color: #373737; border-right-color: #373737;
+      color: #111; cursor: pointer; user-select: none;
     }
     .bevel-btn:active {
-      border-top-color: #373737;
-      border-left-color: #373737;
-      border-bottom-color: #ffffff;
-      border-right-color: #ffffff;
-      padding-top: 2px;
-      padding-left: 2px;
+      border-top-color: #373737; border-left-color: #373737;
+      border-bottom-color: #ffffff; border-right-color: #ffffff;
+      padding-top: 2px; padding-left: 2px;
     }
     .bevel-inset {
-      background-color: #8b8b8b;
-      border: 4px solid;
-      border-top-color: #373737;
-      border-left-color: #373737;
-      border-bottom-color: #ffffff;
-      border-right-color: #ffffff;
+      background-color: #8b8b8b; border: 4px solid;
+      border-top-color: #373737; border-left-color: #373737;
+      border-bottom-color: #ffffff; border-right-color: #ffffff;
+      color: white;
     }
-    
+    canvas { touch-action: none; }
     .scrollable-panel { touch-action: pan-y; }
     ::-webkit-scrollbar { width: 12px; height: 12px; }
     ::-webkit-scrollbar-track { background: #8b8b8b; border-left: 2px solid #373737; }
     ::-webkit-scrollbar-thumb { background: #c6c6c6; border: 2px solid #ffffff; border-bottom-color: #373737; border-right-color: #373737; }
-    
-    [x-cloak] { display: none !important; }
   </style>
 </head>
-<body x-data="appData()" class="text-base" x-cloak>
-  <div class="h-screen-safe flex flex-col relative w-full overflow-hidden bg-mc-bg">
+
+<body x-data="appData()" @popstate.window="handlePopState" class="antialiased">
+  <div class="h-screen-safe flex flex-col relative w-full overflow-hidden bg-mc-bg max-w-screen-xl mx-auto">
     
-    <!-- Sidebar Overlay & Panel -->
     <template x-if="isSidebarOpen">
-      <div class="fixed inset-0 bg-black/60 z-[60] transition-opacity" @click="isSidebarOpen = false"></div>
+      <div class="fixed inset-0 bg-black/60 z-50 transition-opacity" @click="isSidebarOpen = false"></div>
     </template>
-    
-    <div class="fixed inset-y-0 left-0 w-64 bg-[#c6c6c6] border-r-4 border-[#111] z-[70] transform transition-transform duration-300 flex flex-col"
-         :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+    <div :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 w-64 bg-[#c6c6c6] border-r-4 border-[#111] z-[60] transform transition-transform duration-300 flex flex-col">
       <div class="p-4 bg-[#8b8b8b] border-b-4 border-[#111] flex justify-between items-center" style="padding-top: max(16px, var(--safe-top))">
         <h2 class="text-xl font-bold text-white drop-shadow-md">메뉴 선택</h2>
-        <button @click="isSidebarOpen = false" class="bevel-btn px-2 py-1 bg-red-400 text-white font-bold min-h-[44px]">X</button>
+        <button @click="isSidebarOpen = false" class="bevel-btn px-2 py-1 bg-red-400 text-white font-bold">X</button>
       </div>
       <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scrollable-panel">
         <template x-for="cat in allCategories" :key="cat">
           <button @click="selectCategory(cat)"
-                  class="py-3 px-4 font-bold text-left text-lg min-h-[44px]"
-                  :class="!showFavoritesOnly && selectedCategory === cat ? 'bevel-inset bg-blue-300 text-black' : 'bevel-btn'">
+                  :class="(!showFavoritesOnly && !searchQuery && selectedCategory === cat) ? 'bevel-inset bg-blue-300 text-black' : 'bevel-btn'"
+                  class="py-3 px-4 font-bold text-left text-lg">
             <span x-text="cat"></span>
           </button>
         </template>
       </div>
     </div>
 
-    <!-- Header -->
     <header class="sticky top-0 z-40 bg-[#2d3748] border-b-4 border-[#111] p-4 flex justify-between items-center" style="padding-top: max(16px, var(--safe-top))">
       <div class="flex items-center gap-3">
-        <button @click="isSidebarOpen = true" class="bevel-btn p-2 flex flex-col gap-1 bg-[#c6c6c6] min-h-[44px] justify-center">
+        <button @click="isSidebarOpen = true" class="bevel-btn p-2 flex flex-col gap-1 bg-[#c6c6c6]">
           <div class="w-5 h-1 bg-black"></div>
           <div class="w-5 h-1 bg-black"></div>
           <div class="w-5 h-1 bg-black"></div>
@@ -142,486 +117,339 @@
         </h1>
       </div>
       <div class="flex gap-2 relative">
-        <button @click="openModal('guide')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center min-h-[44px]">⚙️</button>
+        <button @click="openModal('guide')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center whitespace-nowrap">⚙️</button>
         <template x-if="view === 'main'">
-          <button @click="openModal('password')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center min-h-[44px]">🔒 관리</button>
+          <button @click="openModal('password')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center whitespace-nowrap">🔒 관리</button>
         </template>
         <template x-if="view === 'admin'">
-          <button @click="navigate('main')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center bg-yellow-400 min-h-[44px]">🏠 홈</button>
+          <button @click="navigate('main')" class="bevel-btn px-2 py-1 text-sm font-bold flex items-center whitespace-nowrap bg-yellow-400">🏠 홈</button>
         </template>
       </div>
     </header>
 
-    <!-- Content Wrapper -->
-    <div class="flex-1 overflow-y-auto relative z-10 w-full scrollable-panel">
+    <div class="flex-1 overflow-y-auto relative z-10 w-full scrollable-panel pb-24 px-4 pt-4" x-show="view === 'main'">
       
-      <!-- Student View -->
-      <main x-show="view === 'main'" class="p-4 flex flex-col gap-4 h-full max-w-6xl mx-auto pb-24">
-        
-        <!-- Search & Control Panel -->
-        <div class="flex flex-col gap-3 mb-2 border-b-2 border-white/20 pb-4">
-          <div class="flex justify-between items-center flex-wrap gap-2">
-            <span class="text-xl font-bold text-yellow-300 drop-shadow-md" x-text="showFavoritesOnly ? '⭐ 내 즐겨찾기' : '📂 ' + selectedCategory"></span>
-            <button @click="toggleFavoritesMode()" 
-                    class="px-3 py-1 text-sm font-bold transition-colors min-h-[44px]"
-                    :class="showFavoritesOnly ? 'bevel-box bg-yellow-400' : 'bevel-btn bg-[#c6c6c6] text-black'">
-              <span x-text="showFavoritesOnly ? '전체 보기로 돌아가기' : '⭐ 즐겨찾기 모아보기'"></span>
-            </button>
-          </div>
-          <input type="text" x-model="searchQuery" placeholder="🔍 앱 이름, 단원, #태그 검색..." 
-                 class="bevel-inset p-3 w-full text-black bg-[#e5e5e5] focus:outline-none focus:bg-white focus:ring-2 focus:ring-yellow-400 min-h-[44px]">
+      <!-- Top Control Panel (Search & Fav) -->
+      <div class="flex flex-col gap-3 mb-2 border-b-2 border-white/20 pb-4">
+        <div class="flex justify-between items-center flex-wrap gap-2">
+          <span class="text-xl font-bold text-yellow-300 drop-shadow-md" x-text="showFavoritesOnly ? '⭐ 내 즐겨찾기' : (searchQuery ? '🔍 검색 결과' : selectedCategory)"></span>
+          <button @click="toggleFavMode()"
+                  :class="showFavoritesOnly ? 'bevel-box bg-yellow-400' : 'bevel-btn bg-white text-black'"
+                  class="px-3 py-1 text-sm font-bold transition-colors"
+                  x-text="showFavoritesOnly ? '전체 보기로 돌아가기' : '⭐ 즐겨찾기 모아보기'"></button>
         </div>
+        <input type="text" x-model="searchQuery" placeholder="🔍 앱 이름, 단원명, #해시태그 검색..." 
+               class="text-base bevel-inset p-3 w-full text-black bg-[#e5e5e5] focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+      </div>
 
-        <!-- Unit Tabs -->
-        <template x-if="!showFavoritesOnly && !searchQuery">
-          <div class="flex flex-wrap gap-2 mb-4">
-            <template x-for="unit in studentAvailableUnits" :key="unit">
-              <button @click="selectedUnit = unit"
-                      class="px-3 py-1 text-sm font-bold min-h-[44px]"
-                      :class="selectedUnit === unit ? 'bevel-box bg-yellow-400' : 'bevel-btn'"
-                      x-text="unit"></button>
-            </template>
-          </div>
-        </template>
+      <!-- Unit Tabs -->
+      <template x-if="!showFavoritesOnly && !searchQuery">
+        <div class="flex flex-wrap gap-2 mb-4">
+          <template x-for="unit in studentAvailableUnits" :key="unit">
+            <button @click="selectedUnit = unit"
+                    :class="selectedUnit === unit ? 'bevel-box bg-yellow-400' : 'bevel-btn'"
+                    class="px-3 py-1 text-sm font-bold transition-colors" x-text="unit"></button>
+          </template>
+        </div>
+      </template>
 
-        <!-- Cards Grid (1 col mobile, 2 col tablet, 3 col PC) -->
-        <div class="grid grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 gap-6">
-          <template x-for="app in displayedApps" :key="app.id">
-            <div class="bevel-box p-4 flex flex-col h-full bg-[#c6c6c6] hover:-translate-y-1 transition-transform relative">
-              
-              <button @click="toggleFavorite(app.id)" 
-                      class="absolute top-4 right-4 text-3xl drop-shadow-md transition-transform hover:scale-110 active:scale-90 z-10"
-                      title="즐겨찾기">
-                <span x-text="favorites.includes(app.id) ? '⭐' : '☆'"></span>
-              </button>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-for="app in displayedApps" :key="app.id">
+          <div class="bevel-box p-4 flex flex-col h-full bg-[#c6c6c6] hover:-translate-y-1 transition-transform relative">
+            <button @click.stop="toggleFavorite(app.id)" class="absolute top-4 right-4 text-3xl drop-shadow-md transition-transform hover:scale-110 active:scale-90" title="즐겨찾기">
+              <span x-text="favorites.includes(app.id) ? '⭐' : '☆'"></span>
+            </button>
 
-              <div class="flex justify-between items-start mb-2 pr-10">
-                <div class="flex items-center gap-3">
-                  <div class="text-4xl p-2 bevel-inset bg-[#e5e5e5] drop-shadow-md relative">
-                    <span x-text="app.emoji"></span>
-                    <template x-if="isAppHot(app)">
-                      <span class="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-1 py-0.5 font-bold border-2 border-white rounded-md transform rotate-12 drop-shadow-sm">HOT</span>
-                    </template>
-                  </div>
-                  <div>
-                    <span class="text-xs bg-gray-700 text-white px-2 py-1 inline-block mb-1 font-bold" x-text="app.category + ' > ' + app.unit"></span>
-                    <h3 class="font-bold text-lg leading-tight break-keep text-black" x-text="app.name"></h3>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Hashtags -->
-              <template x-if="app.tags">
-                <div class="flex flex-wrap gap-1 my-2">
-                  <template x-for="tag in app.tags.split(',').map(t=>t.trim()).filter(Boolean)" :key="tag">
-                    <span @click="searchQuery = tag; showFavoritesOnly = false;" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 border-2 border-blue-400 font-bold cursor-pointer hover:bg-blue-200">#<span x-text="tag"></span></span>
+            <div class="flex justify-between items-start mb-4 pr-10">
+              <div class="flex items-center gap-3">
+                <div class="text-4xl p-2 bevel-inset bg-white drop-shadow-md relative">
+                  <span x-text="app.emoji"></span>
+                  <template x-if="app.isHot || isAutoHot(app.id)">
+                    <span class="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] px-1 py-0.5 font-bold border-2 border-white rounded-md transform rotate-12 drop-shadow-sm">HOT</span>
                   </template>
                 </div>
-              </template>
-              
-              <div class="mt-auto pt-4 flex gap-2">
-                <button @click="openModal('qr', app)" class="bevel-btn px-4 py-2 text-2xl bg-[#e5e5e5] min-h-[44px]">📱</button>
-                <button @click="openApp(app)" class="bevel-btn flex-1 py-2 text-lg font-bold flex justify-center items-center gap-2 bg-green-400 hover:bg-green-300 min-h-[44px]">▶ OPEN</button>
+                <div>
+                  <span class="text-xs bg-gray-700 text-white px-2 py-1 inline-block mb-1 font-bold" x-text="`${app.category} > ${app.unit}`"></span>
+                  <h3 class="font-bold text-lg leading-tight break-keep" x-text="app.name"></h3>
+                  <!-- Hashtags -->
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <template x-for="tag in getTags(app.tags)" :key="tag">
+                      <span @click.stop="searchQuery = tag" class="text-[10px] bg-blue-100 text-blue-800 border border-blue-300 px-1 rounded cursor-pointer hover:bg-blue-200" x-text="`#${tag}`"></span>
+                    </template>
+                  </div>
+                </div>
               </div>
             </div>
-          </template>
-          
-          <template x-if="displayedApps.length === 0">
-            <div class="col-span-full bevel-inset p-8 text-center text-white font-bold text-xl">
-              <span x-text="searchQuery ? '검색 결과가 없습니다. 🪹' : '등록된 웹앱이 없습니다. 🪹'"></span>
+            
+            <div class="mt-auto pt-2 flex gap-2">
+              <button @click="openModal('qr', app)" class="bevel-inset bg-white p-1 hover:scale-105 transition-transform" title="QR 보기">
+                <div class="w-[40px] h-[40px] flex items-center justify-center font-bold text-black text-xs">QR</div>
+              </button>
+              <button @click="openAppUrl(app)" class="bevel-btn flex-1 py-2 text-lg font-bold flex justify-center items-center gap-2 bg-green-400 hover:bg-green-300">
+                ▶ OPEN
+              </button>
             </div>
-          </template>
-        </div>
-      </main>
-
-      <!-- Admin View -->
-      <main x-show="view === 'admin'" class="p-4 flex flex-col gap-4 h-full pb-24 max-w-6xl mx-auto">
-        <div class="flex justify-between items-end mb-4 flex-wrap gap-4">
-          <h2 class="text-2xl font-bold flex items-center gap-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-white">
-            <span class="text-3xl">🛠️</span> 관리자 패널
-          </h2>
-          <button @click="openModal('appForm', null)" class="bevel-btn bg-blue-400 px-6 py-2 font-bold flex items-center gap-2 min-h-[44px]">
-            ➕ 새 웹앱 추가
-          </button>
-        </div>
-
-        <div class="flex flex-wrap gap-3 mb-2 p-3 bg-[#c6c6c6] bevel-inset items-center">
-          <span class="font-bold text-sm text-black mr-2">🔍 필터:</span>
-          <select class="bevel-btn bg-[#e5e5e5] p-2 text-sm font-bold min-h-[44px] text-black" x-model="adminCategoryFilter" @change="adminUnitFilter = '전체'">
-            <option value="전체">모든 대분류 보기</option>
-            <template x-for="c in allCategories" :key="c"><option :value="c" x-text="c"></option></template>
-          </select>
-          <select class="bevel-btn bg-[#e5e5e5] p-2 text-sm font-bold min-h-[44px] text-black" x-model="adminUnitFilter">
-            <template x-for="u in adminAvailableUnits" :key="u">
-              <option :value="u" x-text="u === '전체' ? '모든 소분류 보기' : u"></option>
-            </template>
-          </select>
-          <div class="ml-auto text-xs font-bold bg-[#373737] text-white px-3 py-2 border-2 border-[#ffffff] border-b-[#111111] border-r-[#111111]">
-            총 <span x-text="adminDisplayedApps.length"></span>개
           </div>
-        </div>
+        </template>
+        
+        <template x-if="displayedApps.length === 0">
+          <div class="col-span-full bevel-inset p-8 text-center text-white font-bold text-xl">
+            <span x-text="searchQuery ? '검색 결과가 없습니다. 🪹' : '등록된 웹앱이 없거나 아직 오픈되지 않았습니다. ⏳'"></span>
+          </div>
+        </template>
+      </div>
+    </div>
 
-        <div class="bevel-box overflow-x-auto bg-[#c6c6c6] p-2">
-          <table class="w-full text-sm text-left min-w-[900px] text-black">
-            <thead class="bg-[#8b8b8b] text-white">
-              <tr>
-                <th class="p-3 border-2 border-[#373737]">상태/조회</th>
-                <th class="p-3 border-2 border-[#373737]">대분류/소분류</th>
-                <th class="p-3 border-2 border-[#373737] text-center">아이콘</th>
-                <th class="p-3 border-2 border-[#373737]">앱 정보 (태그/예약)</th>
-                <th class="p-3 border-2 border-[#373737]">관리</th>
+    <div class="flex-1 overflow-y-auto relative z-10 w-full scrollable-panel pb-24 px-4 pt-4" x-show="view === 'admin'" style="display:none;">
+      <div class="flex justify-between items-end mb-4 flex-wrap gap-4">
+        <h2 class="text-2xl font-bold flex items-center gap-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+          <span class="text-3xl">🛠️</span> 관리자 패널
+        </h2>
+        <button @click="openFormModal(null)" class="bevel-btn bg-blue-400 px-6 py-2 font-bold flex items-center gap-2">
+          ➕ 새 웹앱 추가
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-3 mb-2 p-3 bg-[#8b8b8b] bevel-inset items-center rounded-sm">
+        <span class="font-bold text-sm text-white drop-shadow-md mr-2">🔍 목록 필터:</span>
+        <select class="text-base bevel-btn bg-[#e5e5e5] p-2 font-bold" x-model="adminCategoryFilter">
+          <option value="전체">모든 대분류 보기</option>
+          <template x-for="c in allCategories" :key="c"><option :value="c" x-text="c"></option></template>
+        </select>
+        <select class="text-base bevel-btn bg-[#e5e5e5] p-2 font-bold" x-model="adminUnitFilter">
+          <template x-for="u in adminAvailableUnits" :key="u"><option :value="u" x-text="u === '전체' ? '모든 소분류 보기' : u"></option></template>
+        </select>
+        <div class="ml-auto text-xs font-bold bg-[#373737] text-white px-3 py-2 border-2 border-[#ffffff] border-b-[#111111] border-r-[#111111]" x-text="`총 ${adminDisplayedApps.length}개`"></div>
+      </div>
+
+      <div class="bevel-box overflow-x-auto bg-[#c6c6c6] p-2">
+        <table class="w-full text-sm text-left min-w-[900px]">
+          <thead class="bg-[#8b8b8b] text-white">
+            <tr>
+              <th class="p-3 border-2 border-[#373737]">상태/예약</th>
+              <th class="p-3 border-2 border-[#373737]">대/소분류</th>
+              <th class="p-3 border-2 border-[#373737]">앱 정보 (이름/URL/태그)</th>
+              <th class="p-3 border-2 border-[#373737]">조회수</th>
+              <th class="p-3 border-2 border-[#373737]">관리</th>
+            </tr>
+          </thead>
+          <tbody class="bg-[#e5e5e5]">
+            <template x-for="app in adminDisplayedApps" :key="app.id">
+              <tr class="border-b-2 border-[#c6c6c6] hover:bg-gray-100" :class="app.isHidden ? 'opacity-50' : ''">
+                <td class="p-3 border-2 border-[#373737] font-bold text-center space-y-1">
+                  <span x-show="app.isHidden" class="block text-xs bg-gray-500 text-white rounded px-1">비공개</span>
+                  <span x-show="!app.isHidden" class="block text-xs bg-green-500 text-white rounded px-1">공개</span>
+                  <span x-show="app.isHot" class="block text-xs bg-red-500 text-white rounded px-1">🔥 수동HOT</span>
+                  <span x-show="isFuture(app.openDate)" class="block text-xs bg-purple-500 text-white rounded px-1">⏳ 예약됨</span>
+                </td>
+                <td class="p-3 border-2 border-[#373737] font-bold">
+                  <div class="text-blue-700" x-text="app.category"></div>
+                  <div class="text-gray-700 text-xs" x-text="app.unit"></div>
+                </td>
+                <td class="p-3 border-2 border-[#373737] font-bold">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl" x-text="app.emoji"></span>
+                    <span x-text="app.name"></span>
+                  </div>
+                  <div class="text-xs font-normal text-blue-500 mt-1 truncate max-w-[250px]" x-text="app.url"></div>
+                  <div class="text-[10px] text-gray-500 mt-1" x-text="app.tags ? `#${app.tags}` : ''"></div>
+                </td>
+                <td class="p-3 border-2 border-[#373737] font-bold text-center" x-text="app.views || 0"></td>
+                <td class="p-3 border-2 border-[#373737]">
+                  <div class="flex gap-2 justify-center">
+                    <button @click="openFormModal(app)" class="bevel-btn px-2 py-1 bg-yellow-300 text-xs font-bold">수정</button>
+                    <button @click="openModal('confirmDelete', app)" class="bevel-btn px-2 py-1 bg-red-400 text-xs font-bold">삭제</button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody class="bg-[#e5e5e5]">
-              <template x-for="app in adminDisplayedApps" :key="app.id">
-                <tr class="border-b-2 border-[#c6c6c6] hover:bg-[#d4d4d4] transition-colors" :class="app.isHidden ? 'opacity-60 bg-[#c6c6c6]' : ''">
-                  <td class="p-3 border-2 border-[#373737] font-bold text-center space-y-1">
-                    <template x-if="app.isHidden"><span class="block text-xs bg-gray-600 text-white px-1">비공개</span></template>
-                    <template x-if="!app.isHidden"><span class="block text-xs bg-green-600 text-white px-1">공개됨</span></template>
-                    <template x-if="app.isHot"><span class="block text-xs bg-red-500 text-white px-1 mt-1">고정HOT</span></template>
-                    <template x-if="app.publishDate && new Date(app.publishDate) > new Date()"><span class="block text-xs bg-purple-500 text-white px-1 mt-1">⏳ 예약됨</span></template>
-                    <div class="text-xs mt-1 text-gray-700">조회: <span x-text="app.clicks || 0"></span></div>
-                  </td>
-                  <td class="p-3 border-2 border-[#373737] font-bold text-blue-800">
-                    <div x-text="app.category"></div>
-                    <div class="text-xs text-gray-700 font-normal" x-text="app.unit"></div>
-                  </td>
-                  <td class="p-3 border-2 border-[#373737] text-2xl text-center" x-text="app.emoji"></td>
-                  <td class="p-3 border-2 border-[#373737] font-bold">
-                    <div x-text="app.name"></div>
-                    <div class="text-xs font-normal text-blue-600 mt-1 truncate max-w-[250px]" x-text="app.url"></div>
-                    <template x-if="app.tags"><div class="text-[10px] text-gray-600 mt-1">#<span x-text="app.tags"></span></div></template>
-                  </td>
-                  <td class="p-3 border-2 border-[#373737]">
-                    <div class="flex gap-2">
-                      <button @click="openModal('appForm', app)" class="bevel-btn px-2 py-1 bg-yellow-300 text-xs font-bold min-h-[36px]">수정</button>
-                      <button @click="openModal('confirmDelete', app)" class="bevel-btn px-2 py-1 bg-red-400 text-xs font-bold text-white min-h-[36px]">삭제</button>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-              <template x-if="adminDisplayedApps.length === 0">
-                <tr><td colspan="5" class="p-4 text-center font-bold">등록된 앱이 없습니다.</td></tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div> <!-- End Content Wrapper -->
+            </template>
+            <template x-if="adminDisplayedApps.length === 0">
+              <tr><td colspan="5" class="p-4 text-center font-bold">검색 조건에 맞는 데이터가 없습니다.</td></tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    <!-- Footer -->
-    <footer class="text-center p-2 bg-[#2d3748] border-t-4 border-[#111] z-40 text-xs font-bold text-white" style="padding-bottom: max(8px, var(--safe-bottom))">
+    <footer class="text-center p-2 bg-[#2d3748] border-t-4 border-[#111] z-40 text-xs font-bold" style="padding-bottom: max(8px, var(--safe-bottom))">
       Created by Yang DH
     </footer>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Spinner -->
     <template x-if="loading">
       <div class="fixed inset-0 z-[200] bg-black/70 flex flex-col items-center justify-center backdrop-blur-sm">
         <div class="text-6xl animate-bounce drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">⛏️</div>
-        <div class="mt-4 text-white font-bold text-xl tracking-widest animate-pulse">데이터 채굴 중...</div>
+        <div class="mt-4 text-white font-bold text-xl tracking-widest animate-pulse">통신 중...</div>
       </div>
     </template>
 
-    <!-- Modals Overlay System -->
+    <!-- Modals Container -->
     <template x-if="modal.type">
       <div class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style="padding-bottom: max(16px, var(--safe-bottom))" @click="closeModal()">
-        <div class="bevel-box w-full max-w-md max-h-[90dvh] overflow-y-auto scrollable-panel p-6 flex flex-col bg-[#c6c6c6]" @click.stop>
-          
-          <!-- Password Modal -->
-          <template x-if="modal.type === 'password'">
-            <div>
-              <h3 class="text-xl font-bold mb-4 text-black">관리자 인증</h3>
-              <p class="mb-4 text-sm text-gray-700">비밀번호를 입력하세요.</p>
-              <input type="password" x-model="adminPwInput" @keyup.enter="verifyPassword()" class="bevel-inset w-full p-3 mb-6 text-black bg-[#e5e5e5] focus:outline-none focus:bg-white" autofocus>
-              <div class="flex justify-end gap-2 mt-auto">
-                <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
-                <button @click="verifyPassword()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold min-h-[44px]">확인</button>
-              </div>
+        
+        <!-- App Form Modal (Create/Update) -->
+        <template x-if="modal.type === 'appForm'">
+          <div class="bevel-box w-full max-w-md max-h-[90dvh] bg-[#c6c6c6] overflow-y-auto scrollable-panel p-6 flex flex-col" @click.stop>
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-xl font-bold" x-text="formData.id ? '웹앱 수정' : '새 웹앱 추가'"></h3>
+              <button @click="loadDraft()" x-show="!formData.id && hasDraft()" class="bg-yellow-200 border border-yellow-500 text-yellow-800 text-xs px-2 py-1 rounded font-bold">임시저장 불러오기</button>
             </div>
-          </template>
+            
+            <label class="text-sm font-bold mb-1">대분류 (사이드바 탭)</label>
+            <select class="text-base bevel-inset p-2 w-full text-black bg-[#e5e5e5] mb-2" x-model="formData.category" @change="checkCustomCat()">
+              <template x-for="c in allCategories" :key="c"><option :value="c" x-text="c"></option></template>
+              <option value="custom">➕ 직접 입력 (새 대분류)</option>
+            </select>
+            <template x-if="isCustomCat">
+              <input type="text" x-model="formData.customCategory" @input="saveDraft()" class="text-base bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="새 대분류 입력" />
+            </template>
 
-          <!-- Alert Modal -->
-          <template x-if="modal.type === 'alert'">
-            <div>
-              <h3 class="text-xl font-bold mb-4 text-red-600">알림</h3>
-              <p class="mb-6 text-black" x-text="modal.data"></p>
-              <div class="flex justify-end mt-auto">
-                <button @click="closeModal()" class="bevel-btn px-6 py-2 bg-blue-400 font-bold min-h-[44px]">확인</button>
-              </div>
+            <label class="text-sm font-bold mb-1 mt-2">소분류 (단원 등)</label>
+            <select class="text-base bevel-inset p-2 w-full text-black bg-[#e5e5e5] mb-2" x-model="formData.unit" @change="checkCustomUnit()">
+              <template x-for="u in allUnits" :key="u"><option :value="u" x-text="u"></option></template>
+              <option value="custom">➕ 직접 입력 (새 소분류)</option>
+            </select>
+            <template x-if="isCustomUnit">
+              <input type="text" x-model="formData.customUnit" @input="saveDraft()" class="text-base bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="새 소분류 입력" />
+            </template>
+
+            <label class="text-sm font-bold mb-1 mt-2">앱 이름 & 이모지 (1글자)</label>
+            <div class="flex gap-2 mb-4">
+              <input type="text" maxlength="2" x-model.debounce.1000ms="formData.emoji" @input="saveDraft()" class="text-base bevel-inset p-2 w-16 text-center text-black bg-[#e5e5e5]" placeholder="🔬" />
+              <input type="text" x-model.debounce.1000ms="formData.name" @input="saveDraft()" class="text-base bevel-inset p-2 flex-1 text-black bg-[#e5e5e5]" placeholder="예: 방탈출 게임" />
             </div>
-          </template>
 
-          <!-- Confirm Delete Modal -->
-          <template x-if="modal.type === 'confirmDelete'">
-            <div>
-              <h3 class="text-xl font-bold mb-4 text-red-600">삭제 확인</h3>
-              <p class="mb-6 break-keep text-black">정말 <b x-text="'[' + modal.data.name + ']'"></b> 웹앱을 삭제하시겠습니까?</p>
-              <div class="flex justify-end gap-2 mt-auto">
-                <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
-                <button @click="executeDelete()" class="bevel-btn px-4 py-2 bg-red-400 font-bold text-white min-h-[44px]">삭제하기</button>
-              </div>
-            </div>
-          </template>
+            <label class="text-sm font-bold mb-1">URL 링크</label>
+            <input type="url" x-model.debounce.1000ms="formData.url" @input="saveDraft()" class="text-base bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5]" placeholder="https://..." />
 
-          <!-- QR Modal -->
-          <template x-if="modal.type === 'qr'">
-            <div class="flex flex-col items-center">
-              <h3 class="text-2xl font-bold mb-2 text-black" x-text="modal.data.name"></h3>
-              <p class="mb-6 text-sm text-gray-700 bg-gray-200 p-2 break-all w-full text-center" x-text="modal.data.url"></p>
-              <!-- 200x200 QR 배경은 흰색이어야 스캔이 잘 됨 -->
-              <div class="bg-[#ffffff] p-4 bevel-inset mb-6 w-[240px] h-[240px] flex items-center justify-center">
-                <div id="qrcode-container"></div>
-              </div>
-              <button @click="closeModal()" class="bevel-btn w-full py-3 bg-red-400 font-bold text-lg min-h-[44px]">닫기</button>
-            </div>
-          </template>
+            <label class="text-sm font-bold mb-1">해시태그 (쉼표로 구분)</label>
+            <input type="text" x-model.debounce.1000ms="formData.tags" @input="saveDraft()" class="text-base bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5]" placeholder="퀴즈, 실험, 1학기" />
 
-          <!-- Form Modal (Add/Edit) -->
-          <template x-if="modal.type === 'appForm'">
-            <div class="flex flex-col h-full text-black">
-              <!-- 에러 1번 수정: formData.id 를 참조하여 null 접근 원천 차단 -->
-              <h3 class="text-xl font-bold mb-4" x-text="formData.id ? '웹앱 수정' : '새 웹앱 추가'"></h3>
-              <div class="text-xs bg-yellow-100 text-yellow-800 p-1 mb-2 border-2 border-yellow-400 font-bold">💡 폼 입력 시 자동 임시저장 됩니다.</div>
-              
-              <label class="text-sm font-bold mb-1">대분류 (사이드바 메뉴)</label>
-              <!-- 에러 2번 수정: x-model.debounce 제거 후 @change 와 @input 으로 분리 매핑 -->
-              <select class="bevel-inset p-2 w-full text-black bg-[#e5e5e5] focus:bg-white mb-2 min-h-[44px]" 
-                      x-model="formData.categoryPreset" 
-                      @change="formData.categoryPreset === 'custom' ? formData.category = '' : formData.category = formData.categoryPreset; saveDraft();">
-                <template x-for="c in allCategories" :key="c"><option :value="c" x-text="c"></option></template>
-                <option value="custom">➕ 직접 입력</option>
-              </select>
-              <template x-if="formData.categoryPreset === 'custom'">
-                <input type="text" x-model="formData.category" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:outline-none focus:bg-white focus:ring-2" placeholder="새 대분류">
-              </template>
+            <label class="text-sm font-bold mb-1">예약 오픈일시 (선택)</label>
+            <input type="datetime-local" x-model="formData.openDate" @input="saveDraft()" class="text-base bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5]" />
 
-              <label class="text-sm font-bold mb-1">소분류 (단원)</label>
-              <select class="bevel-inset p-2 w-full text-black bg-[#e5e5e5] focus:bg-white mb-2 min-h-[44px]"
-                      x-model="formData.unitPreset"
-                      @change="formData.unitPreset === 'custom' ? formData.unit = '' : formData.unit = formData.unitPreset; saveDraft();">
-                <template x-for="u in allUnits" :key="u"><option :value="u" x-text="u"></option></template>
-                <option value="custom">➕ 직접 입력</option>
-              </select>
-              <template x-if="formData.unitPreset === 'custom'">
-                <input type="text" x-model="formData.unit" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:outline-none focus:bg-white focus:ring-2" placeholder="새 소분류">
-              </template>
-
-              <label class="text-sm font-bold mb-1">이모지 (1글자)</label>
-              <input type="text" maxlength="2" x-model="formData.emoji" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:bg-white" placeholder="🔬">
-
-              <label class="text-sm font-bold mb-1">앱 이름</label>
-              <input type="text" x-model="formData.name" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:bg-white" placeholder="예: 화산 폭발 시뮬레이션">
-
-              <label class="text-sm font-bold mb-1">URL 링크</label>
-              <input type="url" x-model="formData.url" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:bg-white" placeholder="https://...">
-
-              <label class="text-sm font-bold mb-1 flex items-center justify-between">
-                <span>해시태그 (선택)</span>
-                <span class="text-xs text-gray-700">쉼표(,)로 구분</span>
+            <div class="flex flex-col gap-3 mb-6 p-3 bevel-inset bg-[#e5e5e5]">
+              <label class="flex items-center gap-3 cursor-pointer text-black">
+                <input type="checkbox" x-model="formData.isHot" @change="saveDraft()" class="w-5 h-5 accent-red-500" />
+                <span class="font-bold">🔥 수동 HOT 지정</span>
               </label>
-              <input type="text" x-model="formData.tags" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:bg-white" placeholder="방탈출, 퀴즈, AR">
-
-              <label class="text-sm font-bold mb-1 flex items-center justify-between">
-                <span>예약 오픈 일시 (선택)</span>
-                <span class="text-xs text-gray-700">지정 시간 전까지 숨김</span>
+              <label class="flex items-center gap-3 cursor-pointer text-black">
+                <input type="checkbox" x-model="formData.isHidden" @change="saveDraft()" class="w-5 h-5 accent-gray-600" />
+                <span class="font-bold">👁️ 비공개 (학생에게 숨김)</span>
               </label>
-              <input type="datetime-local" x-model="formData.publishDate" @input="saveDraft()" class="bevel-inset p-2 mb-4 w-full text-black bg-[#e5e5e5] focus:bg-white min-h-[44px]">
-
-              <div class="flex flex-col gap-3 mb-6 p-3 bevel-inset bg-[#8b8b8b]">
-                <label class="flex items-center gap-3 cursor-pointer select-none text-white">
-                  <input type="checkbox" x-model="formData.isHot" @change="saveDraft()" class="w-6 h-6 accent-red-500">
-                  <span class="font-bold drop-shadow-md">🔥 고정 HOT (조회수 무관하게 항상 배지 표시)</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer select-none text-white">
-                  <input type="checkbox" x-model="formData.isHidden" @change="saveDraft()" class="w-6 h-6 accent-gray-600">
-                  <span class="font-bold drop-shadow-md">👁️ 완전 비공개 (항상 숨기기)</span>
-                </label>
-              </div>
-
-              <template x-if="formErrorMsg">
-                <p class="text-red-600 text-sm font-bold mb-4 animate-bounce" x-text="formErrorMsg"></p>
-              </template>
-
-              <div class="flex justify-end gap-2 mt-auto pt-4">
-                <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 min-h-[44px]">취소</button>
-                <button @click="executeSaveForm()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold min-h-[44px]">저장</button>
-              </div>
             </div>
-          </template>
 
-          <!-- Guide Modal -->
-          <template x-if="modal.type === 'guide'">
-            <div class="flex flex-col h-full">
-              <h3 class="text-xl font-bold mb-4 flex items-center gap-2 text-black">⚙️ DB 연동 가이드</h3>
-              <div class="bg-[#1e1e1e] text-[#d4d4d4] p-4 font-mono text-xs overflow-auto h-64 bevel-inset mb-4 text-left whitespace-pre break-all select-all scrollable-panel" x-text="gasCodeText"></div>
-              <div class="text-sm space-y-2 mb-4 font-bold text-gray-800">
-                <p class="text-red-600 bg-red-100 p-1 border-2 border-red-500">🚨 앱스 스크립트에 위 코드를 덮어쓰고 <b>반드시 "새 배포"</b>를 해주세요!</p>
-                <p>※ GET(비밀번호 검증)과 POST(데이터저장/조회수)가 분리되어 완벽하게 동작합니다.</p>
-                <p>※ Settings 시트 자동 생성 및 동적 헤더가 적용되어 있습니다.</p>
-              </div>
-              <div class="flex justify-between mt-auto gap-2">
-                <!-- 에러 4번 수정: Fallback Copy 함수 개선 -->
-                <button @click="copyGasCode($event)" class="bevel-btn px-2 py-2 bg-green-400 font-bold min-h-[44px] flex-1 text-sm">📄 코드 복사하기</button>
-                <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-red-400 font-bold text-white min-h-[44px]">닫기</button>
-              </div>
+            <p x-show="formError" class="text-red-600 text-sm font-bold mb-4" x-text="formError"></p>
+
+            <div class="flex justify-end gap-2 mt-auto">
+              <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400">취소</button>
+              <button @click="submitForm()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold">저장</button>
             </div>
-          </template>
-        </div>
+          </div>
+        </template>
+
+        <!-- General Alert Modal -->
+        <template x-if="modal.type === 'alert'">
+          <div class="bevel-box bg-[#c6c6c6] p-6 max-w-sm w-full" @click.stop>
+            <h3 class="text-xl font-bold mb-4 text-red-600">알림</h3>
+            <p class="mb-6 break-keep" x-html="modal.data"></p>
+            <div class="flex justify-end"><button @click="closeModal()" class="bevel-btn px-6 py-2 bg-blue-400 font-bold">확인</button></div>
+          </div>
+        </template>
+
+        <!-- Password Modal -->
+        <template x-if="modal.type === 'password'">
+          <div class="bevel-box bg-[#c6c6c6] p-6 max-w-sm w-full" @click.stop>
+            <h3 class="text-xl font-bold mb-4">관리자 인증</h3>
+            <input type="password" id="pwInput" x-model="adminPwInput" class="text-base bevel-inset w-full p-3 mb-6 text-black bg-[#e5e5e5]" placeholder="비밀번호 입력" />
+            <div class="flex justify-end gap-2">
+              <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400">취소</button>
+              <button @click="verifyPassword()" class="bevel-btn px-4 py-2 bg-blue-400 font-bold">확인</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Confirm Delete Modal -->
+        <template x-if="modal.type === 'confirmDelete'">
+          <div class="bevel-box bg-[#c6c6c6] p-6 max-w-sm w-full" @click.stop>
+            <h3 class="text-xl font-bold mb-4 text-red-600">삭제 확인</h3>
+            <p class="mb-6 break-keep">정말 <b x-text="`[${modal.data.name}]`"></b> 웹앱을 삭제하시겠습니까?</p>
+            <div class="flex justify-end gap-2">
+              <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400">취소</button>
+              <button @click="syncAppAction('delete', modal.data)" class="bevel-btn px-4 py-2 bg-red-400 font-bold text-white">삭제</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- QR Code Modal (200x200, 15% M level) -->
+        <template x-if="modal.type === 'qr'">
+          <div class="bevel-box bg-[#c6c6c6] p-6 max-w-md w-full flex flex-col items-center" @click.stop>
+            <h3 class="text-2xl font-bold mb-2" x-text="modal.data.name"></h3>
+            <p class="mb-6 text-xs text-gray-700 bg-white p-2 break-all bevel-inset text-center" x-text="modal.data.url"></p>
+            <div class="bg-white p-4 bevel-inset mb-6" id="qr-container"></div>
+            <button @click="closeModal()" class="bevel-btn w-full py-3 bg-red-400 font-bold text-lg text-white">닫기</button>
+          </div>
+        </template>
+
+        <!-- Guide & Script Modal -->
+        <template x-if="modal.type === 'guide'">
+          <div class="bevel-box bg-[#c6c6c6] p-6 max-w-lg w-full flex flex-col max-h-[90dvh]" @click.stop>
+            <h3 class="text-xl font-bold mb-4">⚙️ GAS 백엔드 설정</h3>
+            <textarea id="gasScriptArea" readonly class="bg-[#1e1e1e] text-[#d4d4d4] p-4 font-mono text-xs h-64 bevel-inset mb-4 w-full focus:outline-none resize-none" x-text="gasCodeText"></textarea>
+            <div class="text-xs space-y-2 mb-4 font-bold text-gray-800">
+              <p class="text-red-600 bg-red-100 p-1 rounded">🚨 반드시 구글 시트에서 [새 배포] 후 URL을 적용하세요!</p>
+              <p>1. 위 코드를 Apps Script에 붙여넣기 (기존 Apps 시트는 삭제 권장)</p>
+              <p>2. 웹 앱 > 실행: '나', 권한: '모든 사용자' > 새 배포</p>
+            </div>
+            <div class="flex justify-between mt-auto">
+              <button @click="copyGasCode($event)" class="bevel-btn px-4 py-2 bg-green-400 font-bold">📄 코드 복사</button>
+              <button @click="closeModal()" class="bevel-btn px-4 py-2 bg-gray-400 font-bold">닫기</button>
+            </div>
+          </div>
+        </template>
+        
       </div>
     </template>
   </div>
 
   <script>
-    // Set vh for iOS Safari Safe Area
-    const setVH = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-    window.addEventListener('resize', setVH);
-    setVH();
-
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4uM1Wo-B4ZZr6UHkRf3PuPG0gUyN8BByOkIlH7jcTBxyi6j7ewnooSjyufvxuk5A/exec";
+    // ✅ 설정
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVRGy1amf-21U-PslluaaBke7M3YduZgEHV_MVKMahxP17zVfqzcwpHx5BK0FxZPg/exec"; // 여기에 새 배포 URL을 입력하세요!
+    const SHEET_NAME = "Apps";
+    const UNITS = ['1단원', '2단원', '3단원', '4단원', '5단원', '6단원', '7단원', '8단원'];
     const DEFAULT_CATEGORIES = ['중1 과학', '중2 과학', '중3 과학', '수업 영상', '공지/정보'];
-    const DEFAULT_UNITS = ['1단원', '2단원', '3단원', '4단원', '5단원', '6단원', '7단원', '8단원'];
-    const DUMMY_DATA = [
-      { id: 'd1', category: '중2 과학', unit: '1단원', name: '원소 불꽃반응 실험', url: 'https://example.com', emoji: '🔥', isHidden: false, isHot: true, clicks: 150, tags: '실험,가상현실' },
-      { id: 'd2', category: '중2 과학', unit: '2단원', name: '전자기 유도 발전기', url: 'https://example.com', emoji: '⚡', isHidden: false, isHot: false, clicks: 42, tags: '물리' },
-      { id: 'd3', category: '중3 과학', unit: '3단원', name: '태양계 행성 크기 비교', url: 'https://example.com', emoji: '🪐', isHidden: false, isHot: false, clicks: 89, tags: '지구과학,우주' },
-    ];
-
-    const naturalSort = (a, b) => new Intl.Collator('ko', { numeric: true, sensitivity: 'base' }).compare(a, b);
 
     document.addEventListener('alpine:init', () => {
       Alpine.data('appData', () => ({
         view: 'main',
         apps: [],
         loading: false,
-        
-        isSidebarOpen: false,
-        selectedCategory: '중2 과학',
-        selectedUnit: '전체',
-        
         searchQuery: '',
         favorites: JSON.parse(localStorage.getItem('science_hub_favs') || '[]'),
         showFavoritesOnly: false,
-
+        selectedCategory: '중2 과학',
+        selectedUnit: '전체',
+        isSidebarOpen: false,
         adminPw: '',
         adminPwInput: '',
         modal: { type: null, data: null },
         
+        // 폼 상태
+        formData: {},
+        isCustomCat: false,
+        isCustomUnit: false,
+        formError: '',
         adminCategoryFilter: '전체',
         adminUnitFilter: '전체',
 
-        formErrorMsg: '',
-        formData: { id: null, categoryPreset: '중2 과학', category: '중2 과학', unitPreset: '1단원', unit: '1단원', emoji: '🧪', name: '', url: '', tags: '', publishDate: '', isHot: false, isHidden: false },
-
-        gasCodeText: `function doGet(e) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error("스프레드시트를 찾을 수 없습니다. 반드시 구글 시트 메뉴의 [확장 프로그램 > Apps Script]에서 스크립트를 만드세요.");
-    
-    var settingsSheet = ss.getSheetByName('Settings');
-    if(!settingsSheet) {
-      settingsSheet = ss.insertSheet('Settings');
-      settingsSheet.appendRow(['관리자 비밀번호', 'science123']);
-      settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#f4cccc');
-    }
-    var actualPassword = settingsSheet.getRange(1, 2).getValue().toString();
-    
-    var action = (e && e.parameter) ? e.parameter.action : null;
-    if(action === 'verify') {
-      var inputPw = e.parameter.password || '';
-      var result = (inputPw === actualPassword) ? 'success' : 'error';
-      return ContentService.createTextOutput(JSON.stringify({result: result})).setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    var sheet = ss.getSheetByName('Apps');
-    if(!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
-    var data = sheet.getDataRange().getValues();
-    if(data.length < 2) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
-    var headers = data[0];
-    var resultArr = [];
-    for(var i=1; i<data.length; i++) {
-      var obj = {};
-      for(var j=0; j<headers.length; j++) obj[headers[j]] = data[i][j];
-      resultArr.push(obj);
-    }
-    return ContentService.createTextOutput(JSON.stringify(resultArr)).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({error: true, message: error.toString()})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doPost(e) {
-  try {
-    if (!e || !e.postData) throw new Error("웹 요청이 아닙니다. 스크립트 편집기에서 '실행' 버튼을 누르지 마세요.");
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Apps');
-    if(!sheet) {
-      sheet = ss.insertSheet('Apps');
-      sheet.appendRow(['id', 'category', 'unit', 'name', 'url', 'emoji', 'isHidden', 'isHot', 'date', 'clicks', 'tags', 'publishDate']);
-      sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
-    }
-    
-    var req = JSON.parse(e.postData.contents);
-    var action = req.action;
-    var data = req.data;
-    
-    // 동적 헤더 생성 로직
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    
-    if (action === 'click') {
-      var sheetData = sheet.getDataRange().getValues();
-      for(var i=1; i<sheetData.length; i++) {
-        if(sheetData[i][0] === data.id) {
-          var clickCol = headers.indexOf('clicks') + 1;
-          if(clickCol > 0) {
-            var currentClicks = sheet.getRange(i+1, clickCol).getValue() || 0;
-            sheet.getRange(i+1, clickCol).setValue(currentClicks + 1);
-          }
-          break;
-        }
-      }
-    } else if (action === 'create') {
-      var newRow = [];
-      for(var j=0; j<headers.length; j++) {
-        var key = headers[j];
-        if(key === 'id') newRow.push(Utilities.getUuid());
-        else if(key === 'date') newRow.push(new Date().toISOString());
-        else if(key === 'clicks') newRow.push(0);
-        else newRow.push(data[key] !== undefined ? data[key] : '');
-      }
-      sheet.appendRow(newRow);
-    } else if (action === 'update' || action === 'delete') {
-      var sheetData = sheet.getDataRange().getValues();
-      for(var i=1; i<sheetData.length; i++) {
-        if(sheetData[i][0] === data.id) {
-          if(action === 'delete') sheet.deleteRow(i+1);
-          else {
-            for(var j=0; j<headers.length; j++) {
-              var key = headers[j];
-              if(key !== 'id' && key !== 'date' && key !== 'clicks' && data[key] !== undefined) {
-                sheet.getRange(i+1, j+1).setValue(data[key]);
-              }
-            }
-          }
-          break;
-        }
-      }
-    }
-    return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
-  } catch(error) {
-    return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
-  }
-}`,
-
         init() {
-          window.history.replaceState({ view: 'main' }, '');
-          window.addEventListener('popstate', (e) => {
-            const v = e.state?.view;
-            if (['main', 'admin'].includes(v)) {
-              this.view = v;
-              if (this.modal.type) this.closeModal();
-            }
-          });
           this.fetchApps();
+        },
+        
+        handlePopState(e) {
+          const v = e.state?.view;
+          this.view = ['main', 'admin'].includes(v) ? v : 'main';
+          this.modal = { type: null, data: null };
         },
 
         navigate(nextView) {
@@ -631,172 +459,60 @@ function doPost(e) {
           this.showFavoritesOnly = false;
         },
 
-        get allCategories() {
-          const current = this.apps.map(a => a.category).filter(Boolean);
-          return Array.from(new Set([...DEFAULT_CATEGORIES, ...current])).sort(naturalSort);
-        },
-
-        get allUnits() {
-          const current = this.apps.map(a => a.unit).filter(Boolean);
-          return Array.from(new Set([...DEFAULT_UNITS, ...current])).sort(naturalSort);
-        },
-
-        get studentAvailableUnits() {
-          const inCat = this.apps.filter(a => a.category === this.selectedCategory && !a.isHidden).map(a => a.unit);
-          return ['전체', ...Array.from(new Set(inCat)).sort(naturalSort)];
-        },
-
-        get adminAvailableUnits() {
-          if (this.adminCategoryFilter === '전체') return ['전체', ...this.allUnits];
-          const inCat = this.apps.filter(a => a.category === this.adminCategoryFilter).map(a => a.unit);
-          return ['전체', ...Array.from(new Set(inCat)).sort(naturalSort)];
-        },
-
-        get displayedApps() {
-          let filtered = this.apps.filter(app => {
-            if (app.isHidden) return false;
-            if (app.publishDate && new Date(app.publishDate) > new Date()) return false;
-            return true;
-          });
-
-          // Compute Hot status (Top 3 by clicks + fixed hot)
-          const sortedByClicks = [...filtered].sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
-          const top3Ids = sortedByClicks.slice(0, 3).map(a => a.id);
-          filtered.forEach(app => {
-            app._dynamicHot = app.isHot || top3Ids.includes(app.id);
-          });
-
-          if (this.searchQuery.trim() !== '') {
-            const q = this.searchQuery.toLowerCase();
-            return filtered.filter(app => 
-              app.name.toLowerCase().includes(q) || 
-              app.category.toLowerCase().includes(q) || 
-              app.unit.toLowerCase().includes(q) ||
-              (app.tags && app.tags.toLowerCase().includes(q))
-            );
-          }
-
-          if (this.showFavoritesOnly) {
-            return filtered.filter(app => this.favorites.includes(app.id));
-          }
-
-          filtered = filtered.filter(app => app.category === this.selectedCategory);
-          if (this.selectedUnit !== '전체') {
-            filtered = filtered.filter(app => app.unit === this.selectedUnit);
-          }
-          return filtered;
-        },
-
-        get adminDisplayedApps() {
-          let filtered = this.apps;
-          if (this.adminCategoryFilter !== '전체') filtered = filtered.filter(a => a.category === this.adminCategoryFilter);
-          if (this.adminUnitFilter !== '전체') filtered = filtered.filter(a => a.unit === this.adminUnitFilter);
-          return filtered;
-        },
-
-        selectCategory(cat) {
-          this.selectedCategory = cat;
-          this.selectedUnit = '전체';
-          this.showFavoritesOnly = false;
-          this.searchQuery = '';
-          this.isSidebarOpen = false;
-        },
-
-        toggleFavoritesMode() {
-          this.showFavoritesOnly = !this.showFavoritesOnly;
-          if(this.showFavoritesOnly) this.searchQuery = '';
-        },
-
-        toggleFavorite(id) {
-          if (this.favorites.includes(id)) this.favorites = this.favorites.filter(f => f !== id);
-          else this.favorites.push(id);
-          localStorage.setItem('science_hub_favs', JSON.stringify(this.favorites));
-        },
-
-        isAppHot(app) {
-          return app._dynamicHot;
-        },
-
+        // 데이터 통신 (GET & POST)
         async fetchApps() {
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.trim() === '') { this.apps = DUMMY_DATA; return; }
-          
-          if (GOOGLE_SCRIPT_URL.includes('/dev')) {
-            setTimeout(() => this.openModal('alert', '⚠️ 현재 입력된 주소는 /dev 로 끝나는 테스트 주소입니다. 구글 시트에서 반드시 "새 배포"를 누르고 /exec 로 끝나는 주소를 넣어주세요.'), 500);
-            this.apps = DUMMY_DATA;
-            return;
-          }
-
+          if (!GOOGLE_SCRIPT_URL) return;
           this.loading = true;
           try {
             const res = await Promise.race([
-              fetch(GOOGLE_SCRIPT_URL.trim()),
-              new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+              fetch(GOOGLE_SCRIPT_URL),
+              new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000))
             ]);
             const data = await res.json();
-            
-            // 추가된 에러 핸들링: GAS 스크립트 내부에서 에러가 발생했을 경우
-            if (data && data.error) {
-              this.openModal('alert', '구글 시트 에러: ' + data.message);
-              this.apps = DUMMY_DATA;
-              return;
-            }
-            
             this.apps = Array.isArray(data) ? data.map(app => ({
               ...app,
               isHidden: app.isHidden === true || app.isHidden === 'true',
               isHot: app.isHot === true || app.isHot === 'true',
-              clicks: parseInt(app.clicks) || 0
+              views: Number(app.views) || 0
             })) : [];
           } catch(err) {
             console.error(err);
-            this.openModal('alert', '통신 실패! 구글 시트 배포 시 "액세스 권한: 모든 사용자"로 설정되었는지 확인하세요.');
-            this.apps = DUMMY_DATA;
+            this.openModal('alert', '데이터 로드 실패! URL 연결 또는 인터넷 상태를 확인하세요.');
           } finally {
             this.loading = false;
           }
         },
 
         async verifyPassword() {
-          if (!this.adminPwInput) return;
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.trim() === '') {
-            if (this.adminPwInput === 'science123') {
-              this.adminPw = this.adminPwInput;
-              this.closeModal();
-              this.navigate('admin');
-            } else {
-              this.openModal('alert', '임시 로컬 모드 비밀번호는 science123 입니다.');
-            }
+          const cleanInput = this.adminPwInput.trim();
+          if (!cleanInput) return;
+          if (!GOOGLE_SCRIPT_URL) {
+            if (cleanInput === 'science123') { this.adminPw = cleanInput; this.closeModal(); this.navigate('admin'); }
+            else { this.openModal('alert', '임시 로컬 모드 비밀번호는 science123 입니다.'); }
             return;
           }
-          
           if (GOOGLE_SCRIPT_URL.includes('/dev')) {
-            this.openModal('alert', '⚠️ 에러: /dev 로 끝나는 테스트 주소입니다. 새 배포를 통한 /exec 주소를 넣어주세요.');
+            this.openModal('alert', '⚠️ 에러: /dev 로 끝나는 테스트 주소입니다. 반드시 [새 배포]를 통한 /exec 주소를 넣어주세요.');
             return;
           }
-          
+
           this.loading = true;
           try {
-            let targetUrl = '';
-            try {
-              const urlObj = new URL(GOOGLE_SCRIPT_URL.trim());
-              urlObj.searchParams.append('action', 'verify');
-              urlObj.searchParams.append('password', this.adminPwInput);
-              targetUrl = urlObj.toString();
-            } catch(e) {
-              targetUrl = `${GOOGLE_SCRIPT_URL.trim()}?action=verify&password=${encodeURIComponent(this.adminPwInput)}`;
-            }
-
-            const res = await fetch(targetUrl);
+            const baseUrl = GOOGLE_SCRIPT_URL.trim();
+            const paramStr = `action=verify&password=${encodeURIComponent(cleanInput)}`;
+            const targetUrl = baseUrl.includes('?') ? `${baseUrl}&${paramStr}` : `${baseUrl}?${paramStr}`;
+            
+            const res = await fetch(targetUrl, { method: 'GET', redirect: 'follow', headers: { 'Accept': 'application/json' } });
             const data = await res.json();
+            
             if (data.result === 'success') {
-              this.adminPw = this.adminPwInput;
+              this.adminPw = cleanInput;
               this.closeModal();
               this.navigate('admin');
             } else {
               this.openModal('alert', '비밀번호가 일치하지 않습니다.');
             }
           } catch (e) {
-            console.error(e);
             this.openModal('alert', '서버 통신 실패! 구글 시트 배포 시 "액세스 권한: 모든 사용자"로 설정했는지 꼭 확인해주세요.');
           } finally {
             this.loading = false;
@@ -804,176 +520,313 @@ function doPost(e) {
           }
         },
 
-        async openApp(app) {
-          // 백그라운드로 클릭수 1 증가 전송 (no-cors)
-          if (GOOGLE_SCRIPT_URL) {
-            fetch(GOOGLE_SCRIPT_URL, {
-              method: 'POST', mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ action: 'click', data: { id: app.id } })
-            }).catch(e => console.log('Click track failed'));
-            
-            // 로컬 상태 즉각 반영
-            const idx = this.apps.findIndex(a => a.id === app.id);
-            if(idx > -1) this.apps[idx].clicks = (this.apps[idx].clicks || 0) + 1;
-          }
-          window.open(app.url, '_blank');
-        },
-
-        async executeAction(action, data) {
-          if (!GOOGLE_SCRIPT_URL) {
-            if(action === 'create') this.apps.push({ ...data, id: Date.now().toString(), clicks: 0 });
-            if(action === 'delete') this.apps = this.apps.filter(a => a.id !== data.id);
-            if(action === 'update') this.apps = this.apps.map(a => a.id === data.id ? {...a, ...data} : a);
-            return true;
-          }
-
+        async syncAppAction(action, data) {
+          if (!GOOGLE_SCRIPT_URL) return true; // 로컬 모드 통과
           this.loading = true;
           try {
-            await Promise.race([
-              fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action, data, password: this.adminPw })
-              }),
-              new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-            ]);
-            await this.fetchApps();
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST', mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action, data, password: this.adminPw })
+            });
+            setTimeout(() => this.fetchApps(), 1000); // no-cors라 결과를 못읽으므로 1초 뒤 강제 새로고침
             return true;
           } catch(err) {
-            this.openModal('alert', '서버 통신 오류. 변경사항이 저장되지 않았을 수 있습니다.');
+            this.openModal('alert', '통신 오류가 발생했습니다.');
             return false;
           } finally {
             this.loading = false;
           }
         },
 
+        // 조회수 증가 및 앱 열기
+        openAppUrl(app) {
+          window.open(app.url, '_blank');
+          if (GOOGLE_SCRIPT_URL) {
+            const baseUrl = GOOGLE_SCRIPT_URL.trim();
+            const targetUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `action=view&id=${encodeURIComponent(app.id)}`;
+            fetch(targetUrl, { method: 'GET', mode: 'no-cors' }).catch(e => console.log('view count err', e));
+          }
+        },
+
+        // 유틸리티 및 헬퍼
+        naturalSort(a, b) { return new Intl.Collator('ko', { numeric: true, sensitivity: 'base' }).compare(a, b); },
+        isFuture(dateStr) { return dateStr ? new Date(dateStr) > new Date() : false; },
+        getTags(tagStr) { return tagStr ? tagStr.split(',').map(t => t.trim()).filter(Boolean) : []; },
+        isAutoHot(id) {
+          const top3 = [...this.apps].filter(a => !a.isHidden && !this.isFuture(a.openDate) && a.views > 0)
+                                     .sort((a, b) => b.views - a.views).slice(0, 3).map(a => a.id);
+          return top3.includes(id);
+        },
+
+        // 즐겨찾기
+        toggleFavorite(id) {
+          const next = this.favorites.includes(id) ? this.favorites.filter(f => f !== id) : [...this.favorites, id];
+          this.favorites = next;
+          localStorage.setItem('science_hub_favs', JSON.stringify(next));
+        },
+        toggleFavMode() {
+          this.showFavoritesOnly = !this.showFavoritesOnly;
+          this.searchQuery = '';
+        },
+
+        // 동적 목록 산출
+        get allCategories() {
+          const cats = this.apps.map(a => a.category).filter(Boolean);
+          return Array.from(new Set([...DEFAULT_CATEGORIES, ...cats])).sort(this.naturalSort);
+        },
+        get allUnits() {
+          const u = this.apps.map(a => a.unit).filter(Boolean);
+          return Array.from(new Set([...UNITS, ...u])).sort(this.naturalSort);
+        },
+        get studentAvailableUnits() {
+          const u = this.apps.filter(a => a.category === this.selectedCategory && !a.isHidden && !this.isFuture(a.openDate)).map(a => a.unit);
+          return ['전체', ...Array.from(new Set(u)).sort(this.naturalSort)];
+        },
+        get adminAvailableUnits() {
+          const u = this.adminCategoryFilter === '전체' ? this.allUnits : this.apps.filter(a => a.category === this.adminCategoryFilter).map(a => a.unit);
+          return ['전체', ...Array.from(new Set(u)).sort(this.naturalSort)];
+        },
+
+        // 필터링 적용된 앱 목록
+        get displayedApps() {
+          let f = this.apps.filter(a => !a.isHidden && !this.isFuture(a.openDate));
+          if (this.showFavoritesOnly) { f = f.filter(a => this.favorites.includes(a.id)); } 
+          else {
+            f = f.filter(a => a.category === this.selectedCategory);
+            if (this.selectedUnit !== '전체') f = f.filter(a => a.unit === this.selectedUnit);
+          }
+          if (this.searchQuery.trim()) {
+            const q = this.searchQuery.toLowerCase();
+            f = this.apps.filter(a => !a.isHidden && !this.isFuture(a.openDate) && 
+                (a.name.toLowerCase().includes(q) || a.category.toLowerCase().includes(q) || 
+                 a.unit.toLowerCase().includes(q) || (a.tags && a.tags.toLowerCase().includes(q))));
+          }
+          return f.sort((a,b) => new Date(b.date) - new Date(a.date)); // 최신순
+        },
+        get adminDisplayedApps() {
+          let f = this.apps;
+          if (this.adminCategoryFilter !== '전체') f = f.filter(a => a.category === this.adminCategoryFilter);
+          if (this.adminUnitFilter !== '전체') f = f.filter(a => a.unit === this.adminUnitFilter);
+          return f.sort((a,b) => new Date(b.date) - new Date(a.date));
+        },
+
+        // 모달 제어
+        selectCategory(cat) { this.selectedCategory = cat; this.selectedUnit = '전체'; this.showFavoritesOnly = false; this.isSidebarOpen = false; },
         openModal(type, data = null) {
           this.modal = { type, data };
-          if (type === 'appForm') {
-            if (data) {
-              this.formData = {
-                id: data.id,
-                categoryPreset: this.allCategories.includes(data.category) ? data.category : 'custom',
-                category: data.category,
-                unitPreset: this.allUnits.includes(data.unit) ? data.unit : 'custom',
-                unit: data.unit,
-                emoji: data.emoji || '🧪',
-                name: data.name || '',
-                url: data.url || '',
-                tags: data.tags || '',
-                publishDate: data.publishDate || '',
-                isHot: data.isHot || false,
-                isHidden: data.isHidden || false
-              };
-            } else {
-              const draft = localStorage.getItem('science_hub_draft');
-              if (draft) {
-                this.formData = JSON.parse(draft);
-              } else {
-                this.formData = { id: null, categoryPreset: '중2 과학', category: '중2 과학', unitPreset: '1단원', unit: '1단원', emoji: '🧪', name: '', url: '', tags: '', publishDate: '', isHot: false, isHidden: false };
-              }
-            }
-            this.formErrorMsg = '';
-          } else if (type === 'qr') {
+          if(type !== 'password' && type !== 'alert') window.history.pushState({ view: this.view, modal: type }, '');
+          
+          if(type === 'qr') {
             setTimeout(() => {
-              const container = document.getElementById('qrcode-container');
-              if(container) {
-                container.innerHTML = '';
-                new window.QRCode(container, {
-                  text: data.url,
-                  width: 200,
-                  height: 200,
-                  colorDark : "#000000",
-                  colorLight : "#ffffff",
-                  correctLevel : window.QRCode.CorrectLevel.M
-                });
-              }
-            }, 50);
+              document.getElementById('qr-container').innerHTML = '';
+              new window.QRCode(document.getElementById('qr-container'), {
+                text: data.url, width: 200, height: 200, correctLevel : window.QRCode.CorrectLevel.M
+              });
+            }, 100);
           }
-          window.history.pushState({ view: this.view, modal: type }, '');
         },
+        closeModal() { this.modal = { type: null, data: null }; },
 
-        closeModal() {
-          this.modal = { type: null, data: null };
-          if(window.history.state?.modal) window.history.back();
+        // 폼 제어 및 자동 임시저장
+        openFormModal(app) {
+          const isEdit = !!app;
+          this.formData = isEdit ? { ...app } : { category: '중2 과학', unit: '1단원', name: '', url: '', emoji: '🧪', tags: '', isHidden: false, isHot: false, openDate: '' };
+          this.isCustomCat = false; this.isCustomUnit = false; this.formError = '';
+          this.openModal('appForm');
         },
-
+        checkCustomCat() { if(this.formData.category === 'custom') { this.isCustomCat = true; this.formData.category = ''; this.formData.customCategory = ''; } else { this.isCustomCat = false; this.saveDraft(); } },
+        checkCustomUnit() { if(this.formData.unit === 'custom') { this.isCustomUnit = true; this.formData.unit = ''; this.formData.customUnit = ''; } else { this.isCustomUnit = false; this.saveDraft(); } },
+        
         saveDraft() {
-          if (!this.formData.id) { // 새 앱일 때만 임시저장
-            localStorage.setItem('science_hub_draft', JSON.stringify(this.formData));
+          if (this.modal.type === 'appForm' && !this.formData.id) {
+            localStorage.setItem('science_hub_draft', JSON.stringify({ ...this.formData, isCustomCat: this.isCustomCat, isCustomUnit: this.isCustomUnit }));
           }
         },
-
-        async executeSaveForm() {
-          if(!this.formData.name || !this.formData.url || !this.formData.emoji || !this.formData.category || !this.formData.unit) {
-            this.formErrorMsg = '모든 필수 필드를 빠짐없이 입력해주세요.';
-            return;
+        hasDraft() { return !!localStorage.getItem('science_hub_draft'); },
+        loadDraft() {
+          const d = JSON.parse(localStorage.getItem('science_hub_draft'));
+          if(d) { this.formData = d; this.isCustomCat = d.isCustomCat; this.isCustomUnit = d.isCustomUnit; }
+        },
+        
+        async submitForm() {
+          const finalCat = this.isCustomCat ? this.formData.customCategory : this.formData.category;
+          const finalUnit = this.isCustomUnit ? this.formData.customUnit : this.formData.unit;
+          if(!this.formData.name || !this.formData.url || !this.formData.emoji || !finalCat || !finalUnit) {
+            this.formError = '모든 필수 항목을 입력해주세요.'; return;
           }
-          const action = this.formData.id ? 'update' : 'create';
-          const success = await this.executeAction(action, this.formData);
-          if (success) {
-            if(!this.formData.id) localStorage.removeItem('science_hub_draft');
-            this.closeModal();
-          }
+          const finalData = { ...this.formData, category: finalCat, unit: finalUnit };
+          if(!finalData.id) { finalData.id = Date.now().toString(); finalData.date = new Date().toISOString(); finalData.views = 0; }
+          delete finalData.customCategory; delete finalData.customUnit;
+          
+          const success = await this.syncAppAction(this.formData.id ? 'update' : 'create', finalData);
+          if (success) { localStorage.removeItem('science_hub_draft'); this.closeModal(); }
         },
 
-        async executeDelete() {
-          const success = await this.executeAction('delete', { id: this.modal.data.id });
-          if(success) this.closeModal();
-        },
-
+        // 클립보드 폴백 포함 복사
         async copyGasCode(e) {
-          const btn = e.target; 
-          const original = btn.innerText;
-          let copySuccess = false;
-          
-          // 1. 최신 클립보드 API를 먼저 시도
+          const btn = e.target;
+          const text = this.gasCodeText;
           try {
-            if(navigator.clipboard && window.isSecureContext) {
-              await navigator.clipboard.writeText(this.gasCodeText);
-              copySuccess = true;
-            }
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(text);
+              btn.innerText = '✅ 복사 완료';
+            } else { throw new Error('API Blocked'); }
           } catch(err) {
-            console.warn("최신 클립보드 API 차단됨(IFrame). 구형 Fallback 방식으로 우회합니다.", err);
-          }
-
-          // 2. 최신 API가 실패했거나 사용할 수 없을 경우 강제 복사(Fallback) 시도
-          if (!copySuccess) {
             try {
-              const textArea = document.createElement("textarea");
-              textArea.value = this.gasCodeText;
-              textArea.style.position = "fixed";
-              textArea.style.top = "0";
-              textArea.style.left = "0";
-              textArea.style.opacity = "0";
-              document.body.appendChild(textArea);
-              textArea.focus();
-              textArea.select();
-              const successful = document.execCommand('copy');
-              document.body.removeChild(textArea);
-              if(!successful) throw new Error('Fallback execCommand failed');
-              copySuccess = true;
+              const ta = document.createElement('textarea');
+              ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+              document.body.appendChild(ta);
+              ta.focus(); ta.select();
+              document.execCommand('copy');
+              ta.remove();
+              btn.innerText = '✅ 복사 완료 (우회)';
             } catch(fallbackErr) {
-              console.error("강제 복사(Fallback)까지 모두 실패했습니다:", fallbackErr);
+              btn.innerText = '❌ 복사 실패';
             }
           }
+          setTimeout(() => btn.innerText = '📄 코드 복사', 2000);
+        },
 
-          // 3. 최종 성공 여부에 따라 UI 업데이트
-          if (copySuccess) {
-            btn.innerText = '✅ 복사 완료!';
-            btn.classList.replace('bg-green-400', 'bg-blue-400');
-          } else {
-            btn.innerText = '❌ 복사 실패 (수동으로 드래그해주세요)';
-            btn.classList.replace('bg-green-400', 'bg-red-400');
-          }
-          
-          setTimeout(() => {
-            btn.innerText = original;
-            btn.classList.remove('bg-blue-400', 'bg-red-400');
-            btn.classList.add('bg-green-400');
-          }, 3000);
+        // GAS 백엔드 코드
+        gasCodeText: `function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error("스프레드시트를 찾을 수 없습니다.");
+    
+    var settingsSheet = ss.getSheetByName('Settings');
+    if(!settingsSheet) {
+      settingsSheet = ss.insertSheet('Settings');
+      settingsSheet.appendRow(['관리자 비밀번호', 'science123']);
+      settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#f4cccc');
+    }
+    var actualPassword = settingsSheet.getRange(1, 2).getValue().toString().trim();
+    var action = (e && e.parameter) ? e.parameter.action : null;
+    
+    if(action === 'verify') {
+      var inputPw = (e.parameter.password || '').toString().trim();
+      var result = (inputPw === actualPassword) ? 'success' : 'error';
+      return ContentService.createTextOutput(JSON.stringify({result: result})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var sheet = ss.getSheetByName('Apps');
+    if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+    
+    if (action === 'view') {
+      var targetId = e.parameter.id;
+      var data = sheet.getDataRange().getValues();
+      var headers = data[0];
+      var idIdx = headers.indexOf('id');
+      var viewsIdx = headers.indexOf('views');
+      if (idIdx > -1) {
+        if (viewsIdx === -1) {
+          headers.push('views');
+          sheet.getRange(1, headers.length).setValue('views').setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+          viewsIdx = headers.length - 1;
         }
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][idIdx] === targetId) {
+            var cv = Number(sheet.getRange(i+1, viewsIdx+1).getValue()) || 0;
+            sheet.getRange(i+1, viewsIdx+1).setValue(cv + 1);
+            break;
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    if(data.length < 2) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+    
+    var headers = data[0];
+    var result = [];
+    for(var i=1; i<data.length; i++) {
+      var obj = {};
+      for(var j=0; j<headers.length; j++) {
+        obj[headers[j]] = data[i][j];
+      }
+      result.push(obj);
+    }
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({result: 'error', message: err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var settingsSheet = ss.getSheetByName('Settings');
+    var actualPassword = settingsSheet ? settingsSheet.getRange(1, 2).getValue().toString().trim() : 'science123';
+    
+    var req = JSON.parse(e.postData.contents);
+    var action = req.action;
+    var data = req.data;
+    var inputPw = (req.password || '').toString().trim();
+    
+    if (inputPw !== actualPassword) {
+      return ContentService.createTextOutput(JSON.stringify({result: 'error', message: '비밀번호 불일치'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var sheet = ss.getSheetByName('Apps');
+    if (!sheet) sheet = ss.insertSheet('Apps');
+    
+    var headers = [];
+    if (sheet.getLastRow() === 0) {
+      headers = ['timestamp'];
+      sheet.appendRow(headers);
+      sheet.getRange(1, 1).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+    } else {
+      headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    }
+    
+    if (action === 'create' || action === 'update') {
+      var dataKeys = Object.keys(data);
+      dataKeys.forEach(function(key) {
+        if (headers.indexOf(key) === -1) {
+          headers.push(key);
+          sheet.getRange(1, headers.length).setValue(key).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+        }
+      });
+    }
+    
+    if (action === 'create') {
+      var rowData = new Array(headers.length).fill('');
+      rowData[0] = new Date().toISOString();
+      for (var key in data) {
+        var idx = headers.indexOf(key);
+        if (idx > -1) rowData[idx] = data[key];
+      }
+      sheet.appendRow(rowData);
+    } else if (action === 'update') {
+      var sheetData = sheet.getDataRange().getValues();
+      var idIdx = headers.indexOf('id');
+      for(var i=1; i<sheetData.length; i++) {
+        if(sheetData[i][idIdx] === data.id) {
+          for(var key in data) {
+            var idx = headers.indexOf(key);
+            if(idx > -1 && key !== 'id' && key !== 'timestamp') {
+              sheet.getRange(i+1, idx+1).setValue(data[key]);
+            }
+          }
+          break;
+        }
+      }
+    } else if (action === 'delete') {
+      var sheetData = sheet.getDataRange().getValues();
+      var idIdx = headers.indexOf('id');
+      for(var i=1; i<sheetData.length; i++) {
+        if(sheetData[i][idIdx] === data.id) {
+          sheet.deleteRow(i+1);
+          break;
+        }
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({result: 'error', message: err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}`
       }));
     });
   </script>
