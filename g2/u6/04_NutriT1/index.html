@@ -335,14 +335,14 @@ function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['시간', '학번', '이름', '할당용액', '클릭수', '아이오딘(색)', '베네딕트(색)', '뷰렛(색)', '수단3(색)', '발견영양소', '판단근거(서술)', '침소화분석(서술)', '탄수화물산물', '단백질산물', '지방효소', '단답형맞은개수', '객관식점수']);
-      sheet.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+      sheet.appendRow(['시간', '학번', '이름', '할당용액', '클릭수', '아이오딘(색)', '베네딕트(색)', '뷰렛(색)', '수단3(색)', '발견영양소', '판단근거(서술)', '침소화분석(서술)', '탄수화물산물', '단백질산물', '지방효소', '단답형맞은개수', '객관식점수', '붙여넣기여부']);
+      sheet.getRange(1, 1, 1, 18).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
     }
     var data = JSON.parse(e.postData.contents);
     var r = data.reportData;
     sheet.appendRow([
       data.timestamp, data.studentId, data.studentName, data.unknownSolutionId, data.activityClicks,
-      r.iodine, r.benedict, r.biuret, r.sudan, r.nutrients, r.logic_reasoning, r.saliva_analysis, r.carbo_final, r.protein_final, r.fat_enzyme, data.shortAnswerScore, data.quizScore
+      r.iodine, r.benedict, r.biuret, r.sudan, r.nutrients, r.logic_reasoning, r.saliva_analysis, r.carbo_final, r.protein_final, r.fat_enzyme, data.shortAnswerScore, data.quizScore, data.pasteDetected
     ]);
     return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -352,11 +352,11 @@ function doPost(e) {
   }
 }
             </textarea>
-            <button onclick="document.getElementById('gasCodeSnippet').select(); document.execCommand('copy'); alert('복사되었습니다.');" class="absolute top-2 right-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded">복사</button>
+            <button id="btnCopyGas" class="absolute top-2 right-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold rounded-lg transition-colors duration-200 shadow-md">복사</button>
           </div>
         </div>
         <div class="mt-4 flex justify-end">
-          <button onclick="document.getElementById('modalTeacher').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-white text-sm rounded-xl">닫기</button>
+          <button onclick="document.getElementById('modalTeacher').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">닫기</button>
         </div>
       </div>
     </div>
@@ -365,7 +365,7 @@ function doPost(e) {
 
   <script>
     /* ================= APP CONFIGURATION ================= */
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRF_RUuWOxoHTDHMDP_68UGCV981bCWw5sA6Kp8CWOqzRhkCnm_wReidmxkOUUWcXd/exec"; // 선생님의 배포된 웹앱 URL을 입력하세요.
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvgTkrISMRNONgQBRc9iBHN3dVXJQzR_ibeKoPl-cT8CzaTucc_Ks-B31TWJYxc0U/exec"; // 선생님의 배포된 웹앱 URL을 입력하세요.
 
     /* ================= DOM HELPERS & STATE ================= */
     const $ = (s) => document.querySelector(s);
@@ -390,6 +390,7 @@ function doPost(e) {
       reportData: {},
       quizScore: 0,
       shortAnswerScore: 0,
+      pasteDetected: '직접 입력',
       simMode: 'nutrient', // 'nutrient' | 'digestion'
       engine: null
     };
@@ -826,6 +827,31 @@ function doPost(e) {
 
     $('#btnOpenTeacherGuide').addEventListener('click', () => $('#modalTeacher').classList.remove('hidden'));
 
+    // 교사용 가이드 복사 버튼 기능 개선 (alert 팝업 제거 및 버튼 UI 변경 애니메이션 적용)
+    $('#btnCopyGas').addEventListener('click', function() {
+      const textarea = $('#gasCodeSnippet');
+      textarea.select();
+      document.execCommand('copy');
+      
+      const originalText = this.innerText;
+      this.innerText = "복사 완료! ✔️";
+      this.classList.remove('bg-slate-800', 'hover:bg-slate-700');
+      this.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+      
+      setTimeout(() => {
+        this.innerText = originalText;
+        this.classList.add('bg-slate-800', 'hover:bg-slate-700');
+        this.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+      }, 2000);
+    });
+
+    $$('textarea').forEach(textarea => {
+      textarea.addEventListener('paste', () => {
+        appState.pasteDetected = '붙여넣기 감지';
+        console.warn('학생의 붙여넣기 동작이 감지되었습니다.');
+      });
+    });
+
     /* ================= QUIZ & SUBMIT ================= */
     
     function generateQuiz() {
@@ -901,7 +927,8 @@ function doPost(e) {
         activityClicks: appState.simData.clicks,
         reportData: appState.reportData,
         shortAnswerScore: appState.shortAnswerScore,
-        quizScore: appState.quizScore
+        quizScore: appState.quizScore,
+        pasteDetected: appState.pasteDetected
       };
 
       btn.disabled = true;
