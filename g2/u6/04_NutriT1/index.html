@@ -1,837 +1,831 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>중2 과학 | 동물과 에너지 - 영양소 검출 & 소화 탐구</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>중2 과학 | 동물과 에너지 - 영양소 검출 & 소화 탐구</title>
+  
+  <meta name="theme-color" content="#1e293b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>" />
 
-<meta name="theme-color" content="#1e293b" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>" />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-card: #273549;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --secondary: #a855f7;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+      --accent-warn: #fbbf24;
+      --accent-danger: #f87171;
+      --accent-success: #34d399;
+      --vh: 1vh;
+    }
 
-<style>
-:root {
---bg: #0f172a;
---surface: #1e293b;
---surface-card: #273549;
---primary: #38bdf8;
---primary-hover: #0284c7;
---secondary: #a855f7;
---text: #f8fafc;
---muted: #94a3b8;
---border: #334155;
---accent-warn: #fbbf24;
---accent-danger: #f87171;
---accent-success: #34d399;
---vh: 1vh;
-}
+    * {
+      box-sizing: border-box;
+      font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-* {
-box-sizing: border-box;
-font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
--webkit-tap-highlight-color: transparent;
-}
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: calc(var(--vh, 1vh) * 100);
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
 
-body {
-background-color: var(--bg);
-color: var(--text);
-min-height: 100vh;
-min-height: calc(var(--vh, 1vh) * 100);
-margin: 0;
-padding: 0;
-overflow-x: hidden;
-padding-top: env(safe-area-inset-top);
-padding-bottom: env(safe-area-inset-bottom);
-}
+    .scroll-panel {
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
 
-.scroll-panel {
-touch-action: pan-y;
--webkit-overflow-scrolling: touch;
-}
+    #simCanvas {
+      touch-action: none;
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #090d16 100%);
+    }
 
-#simCanvas {
-touch-action: none;
-display: block;
-width: 100%;
-height: 100%;
-background: radial-gradient(circle at 50% 30%, #1e293b 0%, #090d16 100%);
-}
+    .glass-card {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+    }
 
-.glass-card {
-background: rgba(30, 41, 59, 0.85);
-backdrop-filter: blur(10px);
-border: 1px solid rgba(255, 255, 255, 0.08);
-border-radius: 1rem;
-}
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-::-webkit-scrollbar-thumb { background: #475569; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #64748b; }
-</style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  </style>
 </head>
 <body class="antialiased selection:bg-sky-500 selection:text-white flex flex-col justify-between">
 
-<div id="errorBoundaryCard" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md p-4 bg-rose-950/90 border border-rose-500/50 rounded-2xl shadow-2xl backdrop-blur-md">
-<div class="flex items-start gap-3">
-<span class="text-2xl">⚠️</span>
-<div class="flex-1">
-<h4 class="font-bold text-rose-200 text-sm">실행 오류 감지</h4>
-<p id="errorMessageText" class="text-xs text-rose-300 mt-1 leading-relaxed">알 수 없는 문제가 발생했습니다.</p>
-<div class="mt-3 flex gap-2">
-<button onclick="location.reload()" class="px-3 py-1 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition font-medium">새로고침</button>
-<button onclick="document.getElementById('errorBoundaryCard').classList.add('hidden')" class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition">닫기</button>
-</div>
-</div>
-</div>
-</div>
+  <div id="errorBoundaryCard" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md p-4 bg-rose-950/90 border border-rose-500/50 rounded-2xl shadow-2xl backdrop-blur-md">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl">⚠️</span>
+      <div class="flex-1">
+        <h4 class="font-bold text-rose-200 text-sm">실행 오류 감지</h4>
+        <p id="errorMessageText" class="text-xs text-rose-300 mt-1 leading-relaxed">알 수 없는 문제가 발생했습니다.</p>
+        <div class="mt-3 flex gap-2">
+          <button onclick="location.reload()" class="px-3 py-1 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition font-medium">새로고침</button>
+          <button onclick="document.getElementById('errorBoundaryCard').classList.add('hidden')" class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<main id="appRoot" class="flex-1 w-full max-w-6xl mx-auto p-3 sm:p-5 flex flex-col justify-center h-full relative">
+  <main id="appRoot" class="flex-1 w-full max-w-6xl mx-auto p-3 sm:p-5 flex flex-col justify-center h-full relative">
 
-<!-- ================= VIEW 1: INTRO ================= -->
-<section id="viewIntro" class="flex flex-col items-center justify-center min-h-[85vh] text-center px-4 py-8">
-<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-950/70 border border-sky-500/30 text-sky-300 text-xs sm:text-sm font-semibold mb-6">
-<span>🔬 중학교 2학년 과학</span>
-<span class="w-1 h-1 rounded-full bg-sky-400"></span>
-<span>동물과 에너지 탐구 수행평가</span>
-</div>
+    <!-- ================= VIEW 1: INTRO ================= -->
+    <section id="viewIntro" class="flex flex-col items-center justify-center min-h-[85vh] text-center px-4 py-8">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-950/70 border border-sky-500/30 text-sky-300 text-xs sm:text-sm font-semibold mb-6">
+        <span>🔬 중학교 2학년 과학</span>
+        <span class="w-1 h-1 rounded-full bg-sky-400"></span>
+        <span>동물과 에너지 탐구 수행평가</span>
+      </div>
 
-<h1 class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-300 tracking-tight leading-tight max-w-3xl">
-영양소 검출 가상실험실 &<br class="hidden sm:inline"/>소화 작용 탐구
-</h1>
+      <h1 class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-300 tracking-tight leading-tight max-w-3xl">
+        영양소 검출 가상실험실 &<br class="hidden sm:inline"/>소화 작용 탐구
+      </h1>
 
-<p class="mt-4 text-slate-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-미지의 혼합 용액 속에 숨겨진 영양소를 찾아내고, 체내 소화 효소의 작용을 시뮬레이션하여 탐구 보고서를 완성하세요.
-</p>
+      <p class="mt-4 text-slate-400 text-sm sm:text-base max-w-2xl leading-relaxed">
+        미지의 혼합 용액 속에 숨겨진 영양소를 찾아내고, 체내 소화 효소의 작용을 시뮬레이션하여 탐구 보고서를 완성하세요.
+      </p>
 
-<div class="glass-card p-5 mt-8 w-full max-w-md text-left space-y-3 shadow-xl">
-<div class="grid grid-cols-2 gap-3">
-<div>
-<label class="block text-xs font-semibold text-slate-300 mb-1">학번</label>
-<input type="text" id="introStudentId" placeholder="예: 2315" class="w-full px-3 py-2 text-sm bg-slate-900/90 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-400 text-white placeholder-slate-500 transition" />
-</div>
-<div>
-<label class="block text-xs font-semibold text-slate-300 mb-1">이름</label>
-<input type="text" id="introStudentName" placeholder="홍길동" class="w-full px-3 py-2 text-sm bg-slate-900/90 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-400 text-white placeholder-slate-500 transition" />
-</div>
-</div>
-<div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
-<div class="flex items-center justify-between text-slate-300 font-medium">
-<span>배정된 미지용액:</span>
-<span id="allocatedSampleBadge" class="text-amber-400 font-bold px-2 py-0.5 bg-amber-950/60 border border-amber-500/30 rounded-md">학번 입력 대기</span>
-</div>
-</div>
-</div>
+      <div class="glass-card p-5 mt-8 w-full max-w-md text-left space-y-3 shadow-xl">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">학번</label>
+            <input type="text" id="introStudentId" placeholder="예: 2315" class="w-full px-3 py-2 text-sm bg-slate-900/90 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-400 text-white placeholder-slate-500 transition" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">이름</label>
+            <input type="text" id="introStudentName" placeholder="홍길동" class="w-full px-3 py-2 text-sm bg-slate-900/90 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-400 text-white placeholder-slate-500 transition" />
+          </div>
+        </div>
+        <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
+          <div class="flex items-center justify-between text-slate-300 font-medium">
+            <span>배정된 미지용액:</span>
+            <span id="allocatedSampleBadge" class="text-amber-400 font-bold px-2 py-0.5 bg-amber-950/60 border border-amber-500/30 rounded-md">학번 입력 대기</span>
+          </div>
+        </div>
+      </div>
 
-<div class="mt-8">
-<button id="btnStartSim" class="px-8 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-extrabold text-base rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 w-full sm:w-auto">
-실험 시작하기
-</button>
-</div>
+      <div class="mt-8">
+        <button id="btnStartSim" class="px-8 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-extrabold text-base rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 w-full sm:w-auto">
+          실험 시작하기
+        </button>
+      </div>
 
-<div class="mt-14 pt-6 border-t border-slate-800/80 w-full max-w-lg flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-<span>© 과학 가상실험 평가 시스템</span>
-<button id="btnOpenTeacherGuide" class="hover:text-slate-300 underline transition">⚙️ 교사용 DB 연동 가이드</button>
-</div>
-</section>
+      <div class="mt-14 pt-6 border-t border-slate-800/80 w-full max-w-lg flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+        <span>© 과학 가상실험 평가 시스템</span>
+        <button id="btnOpenTeacherGuide" class="hover:text-slate-300 underline transition">⚙️ 교사용 DB 연동 가이드</button>
+      </div>
+    </section>
 
-<!-- ================= VIEW 2: SIMULATION LAB ================= -->
-<section id="viewSim" class="hidden flex-col gap-3 py-2 h-full flex-1">
+    <!-- ================= VIEW 2: SIMULATION LAB ================= -->
+    <section id="viewSim" class="hidden flex-col gap-3 py-2 h-full flex-1">
+      
+      <!-- Top Navigation Header -->
+      <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 px-4 py-3 rounded-2xl shadow-md shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:block">
+            <h2 class="text-sm font-bold text-white">가상 실험실</h2>
+            <span class="text-[10px] text-slate-400" id="labHeaderStudent"></span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnResetLab" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+            실험 초기화
+          </button>
+          <button id="btnGoToReport" class="px-4 py-1.5 text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl transition shadow-md">
+            보고서 작성 📝
+          </button>
+        </div>
+      </div>
 
-<!-- Top Navigation Header -->
-<div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 px-4 py-3 rounded-2xl shadow-md shrink-0">
-<div class="flex items-center gap-3">
-<div class="hidden sm:block">
-<h2 class="text-sm font-bold text-white">가상 실험실</h2>
-<span class="text-[10px] text-slate-400" id="labHeaderStudent"></span>
-</div>
-</div>
-<div class="flex items-center gap-2">
-<button id="btnResetLab" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
-실험 초기화
-</button>
-<button id="btnGoToReport" class="px-4 py-1.5 text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl transition shadow-md">
-보고서 작성 📝
-</button>
-</div>
-</div>
+      <!-- Mode Tabs -->
+      <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-2xl border border-slate-800 shrink-0">
+        <button id="tabModeNutrient" class="py-2 text-xs sm:text-sm font-bold rounded-xl transition bg-sky-500 text-slate-950 shadow">
+          [영역 2] 미지용액 검출
+        </button>
+        <button id="tabModeDigestion" class="py-2 text-xs sm:text-sm font-bold rounded-xl transition text-slate-400 hover:text-white">
+          [영역 3] 소화 효소 작용
+        </button>
+      </div>
 
-<!-- Mode Tabs -->
-<div class="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-2xl border border-slate-800 shrink-0">
-<button id="tabModeNutrient" class="py-2 text-xs sm:text-sm font-bold rounded-xl transition bg-sky-500 text-slate-950 shadow">
-[영역 2] 미지용액 검출
-</button>
-<button id="tabModeDigestion" class="py-2 text-xs sm:text-sm font-bold rounded-xl transition text-slate-400 hover:text-white">
-[영역 3] 소화 효소 작용
-</button>
-</div>
+      <!-- Canvas Area (Fills remaining height) -->
+      <div class="flex-1 bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl relative w-full overflow-hidden min-h-[300px] flex flex-col">
+        <!-- Status & Burner Overlay -->
+        <div class="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none z-10">
+          <span id="canvasStatusText" class="px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-700/80 text-sky-300 text-xs font-medium max-w-[60%]">
+            💡 아래 시약을 선택하여 시험관에 투여하세요.
+          </span>
+          <button id="btnBurner" class="pointer-events-auto px-3 py-1.5 bg-rose-950/80 border border-rose-500/50 text-rose-300 text-[11px] font-bold rounded-xl transition">
+            🔥 가열 켜기
+          </button>
+        </div>
 
-<!-- Canvas Area (Fills remaining height) -->
-<div class="flex-1 bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl relative w-full overflow-hidden min-h-[300px] flex flex-col">
-<!-- Status & Burner Overlay -->
-<div class="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none z-10">
-<span id="canvasStatusText" class="px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-700/80 text-sky-300 text-xs font-medium max-w-[60%]">
-💡 아래 시약을 선택하여 시험관에 투여하세요.
-</span>
-<button id="btnBurner" class="pointer-events-auto px-3 py-1.5 bg-rose-950/80 border border-rose-500/50 text-rose-300 text-[11px] font-bold rounded-xl transition">
-🔥 가열 켜기
-</button>
-</div>
+        <canvas id="simCanvas" class="absolute inset-0 w-full h-full"></canvas>
 
-<canvas id="simCanvas" class="absolute inset-0 w-full h-full"></canvas>
+        <!-- Bottom UI Overlay for Reagents -->
+        <div id="simUIOverlay" class="absolute inset-x-0 bottom-0 p-3 flex justify-center gap-2 z-10 pointer-events-none">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </section>
 
-<!-- Bottom UI Overlay for Reagents -->
-<div id="simUIOverlay" class="absolute inset-x-0 bottom-0 p-3 flex justify-center gap-2 z-10 pointer-events-none">
-<!-- Dynamically populated buttons -->
-</div>
-</div>
-</section>
+    <!-- ================= VIEW 3: REPORT ================= -->
+    <section id="viewReport" class="hidden flex-col gap-4 py-2 scroll-panel h-full overflow-y-auto pb-20">
+      
+      <!-- Report Header -->
+      <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 px-4 py-3 rounded-2xl sticky top-0 z-20 shadow-md">
+        <h2 class="text-sm sm:text-base font-bold text-white">📝 탐구 보고서 작성</h2>
+        <button id="btnBackToSim" class="px-3 py-1.5 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition border border-slate-600">
+          🧪 실험실 돌아가기
+        </button>
+      </div>
 
-<!-- ================= VIEW 3: REPORT ================= -->
-<section id="viewReport" class="hidden flex-col gap-4 py-2 scroll-panel h-full overflow-y-auto pb-20">
+      <!-- Area 2 Form -->
+      <div class="glass-card p-4 space-y-4">
+        <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-sky-950/50 text-sky-300 text-xs font-bold mb-1">
+          [영역 2] 가상 실험을 통한 미지의 용액 분석하기 (30점)
+        </div>
+        
+        <p class="text-sm text-slate-300 leading-relaxed">
+          1. 본인에게 할당된 미지의 용액 번호: <span class="font-bold text-amber-400">미지의 용액 [ <span id="repSolutionNumber"></span> ] 번</span>
+        </p>
 
-<!-- Report Header -->
-<div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 px-4 py-3 rounded-2xl sticky top-0 z-20 shadow-md">
-<h2 class="text-sm sm:text-base font-bold text-white">📝 탐구 보고서 작성</h2>
-<button id="btnBackToSim" class="px-3 py-1.5 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition border border-slate-600">
-🧪 실험실 돌아가기
-</button>
-</div>
+        <div>
+          <p class="text-sm text-slate-300 mb-2">2. 가상 실험 시뮬레이션을 통해 관찰한 시약별 반응 결과를 기록하시오. (관찰된 색깔 변화)</p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">아이오딘 반응</label>
+              <input type="text" id="repIodine" placeholder="예: 청남색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">베네딕트 (+가열)</label>
+              <input type="text" id="repBenedict" placeholder="예: 황적색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">뷰렛 용액</label>
+              <input type="text" id="repBiuret" placeholder="예: 보라색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">수단 Ⅲ 용액</label>
+              <input type="text" id="repSudan" placeholder="예: 선홍색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
+            </div>
+          </div>
+        </div>
 
-<!-- Area 2 Form -->
-<div class="glass-card p-4 space-y-4">
-<div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-sky-950/50 text-sky-300 text-xs font-bold mb-1">
-[영역 2] 가상 실험을 통한 미지의 용액 분석하기 (30점)
-</div>
+        <div class="border-t border-slate-800 pt-4">
 
-<p class="text-sm text-slate-300 leading-relaxed">
-1. 본인에게 할당된 미지의 용액 번호: <span class="font-bold text-amber-400">미지의 용액 [ <span id="repSolutionNumber"></span> ] 번</span>
-</p>
+          
+          <label class="block text-sm text-slate-300 font-bold mb-2">3. [논리적 서술] 위의 실험 결과를 근거로 미지의 용액X&#x25AA;에 포함된 영양소와 판단 이유를 서술하시오&#x2024;</label>
+          <input type="text" id="repNutrients" placeholder="미지의 용액 속 영양소 (예: 녹말, 단백질)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 mb-2">
+          <textarea id="repReasoning" rows="3" placeholder="판단 근거 서술: (예: 아이오딘&#x2E31;아이오딘화 칼륨 용액과 반응에서 청남색으로 변했으므로 녹말이 포함되어 있다&#x2024;&#x2024;&#x2024;)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none"></textarea>
+        </div>
+      </div>
 
-<div>
-<p class="text-sm text-slate-300 mb-2">2. 가상 실험 시뮬레이션을 통해 관찰한 시약별 반응 결과를 기록하시오. (관찰된 색깔 변화)</p>
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-<div>
-<label class="block text-[11px] text-slate-400 mb-1">아이오딘 반응</label>
-<input type="text" id="repIodine" placeholder="예: 청남색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
-</div>
-<div>
-<label class="block text-[11px] text-slate-400 mb-1">베네딕트 (+가열)</label>
-<input type="text" id="repBenedict" placeholder="예: 황적색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
-</div>
-<div>
-<label class="block text-[11px] text-slate-400 mb-1">뷰렛 용액</label>
-<input type="text" id="repBiuret" placeholder="예: 보라색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
-</div>
-<div>
-<label class="block text-[11px] text-slate-400 mb-1">수단 Ⅲ 용액</label>
-<input type="text" id="repSudan" placeholder="예: 선홍색" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-sky-500">
-</div>
-</div>
-</div>
+      <!-- Area 3 Form -->
+      <div class="glass-card p-4 space-y-4">
+        <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-950/50 text-indigo-300 text-xs font-bold mb-1">
+          [영역 3] 소화 과정 탐구 보고서 작성 (20점)
+        </div>
 
-<div class="border-t border-slate-800 pt-4">
+        <div>
+          <label class="block text-sm text-slate-300 font-bold mb-2">1. [실험 분석] 침의 소화 작용</label>
+          <p class="text-xs text-slate-400 mb-2 leading-relaxed">
+            '&#x2E31;녹말+침(37℃)&#x2E31;' 시험관은 베네딕트 반응에서 황적색으로 변했지만, '녹말+물(37℃)&#x25AA;' 시험관은 색 변화가 없었습니다&#x25AA; 침 속에 들어있는 소화 효소의 이름과 이 효소가 녹말을 어떤 물질로 분해했는지 실험 결과와 연계하여 설명하시오&#x2024;
+          </p>
+          <textarea id="repSalivaAnalysis" rows="3" placeholder="답안 작성란&#x2024;&#x2024;&#x2024;&#x2024;&#x2024;" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        </div>
 
+        <div class="border-t border-slate-800 pt-4">
+          <label class="block text-sm text-slate-300 font-bold mb-2">2. [소화 과정 완결] 영양소의 최종 분해 (빈칸 채우기)</label>
+          <p class="text-[11px] text-sky-400 mb-2">※ 3대 영양소가 소화관을 지나며 최종 분해되는 과정을 완성하세요.</p>
+          
+          <div class="space-y-3 bg-slate-900/50 p-3 rounded-lg border border-slate-800 text-[13px] text-slate-300 leading-loose">
+            <p>
+              <span class="text-white font-medium">탄수화물(녹말):</span> 입(아밀레이스) → 작은창자(이자액의 아밀레이스, 탄수화물 분해 효소) → 최종 산물: 
+              <input type="text" id="repCarboFinal" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 ml-1">
+            </p>
+            <p>
+              <span class="text-white font-medium">단백질:</span> 위(펩신) → 작은창자(이자액의 트립신, 단백질 분해 효소) → 최종 산물: 
+              <input type="text" id="repProteinFinal" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 ml-1">
+            </p>
+            <p>
+              <span class="text-white font-medium">지방:</span> 작은창자(쓸개즙의 쓸개 작용 + 이자액의 
+              <input type="text" id="repFatEnzyme" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 mx-1">
+              ) → 최종 산물: [ 지방산 ] + [ 모노글리세라이드 ]
+            </p>
+          </div>
+        </div>
+      </div>
 
-<label class="block text-sm text-slate-300 font-bold mb-2">3. [논리적 서술] 위의 실험 결과를 근거로 미지의 용액X&#x25AA;에 포함된 영양소와 판단 이유를 서술하시오&#x2024;</label>
-<input type="text" id="repNutrients" placeholder="미지의 용액 속 영양소 (예: 녹말, 단백질)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 mb-2">
-<textarea id="repReasoning" rows="3" placeholder="판단 근거 서술: (예: 아이오딘&#x2E31;아이오딘화 칼륨 용액과 반응에서 청남색으로 변했으므로 녹말이 포함되어 있다&#x2024;&#x2024;&#x2024;)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none"></textarea>
-</div>
-</div>
+      <!-- Quiz Section -->
+      <div class="glass-card p-4">
+         <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-emerald-950/50 text-emerald-300 text-xs font-bold mb-4">
+          최종 확인 퀴즈 (객관식)
+        </div>
+        <div id="quizContainer" class="space-y-6"></div>
+      </div>
 
-<!-- Area 3 Form -->
-<div class="glass-card p-4 space-y-4">
-<div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-950/50 text-indigo-300 text-xs font-bold mb-1">
-[영역 3] 소화 과정 탐구 보고서 작성 (20점)
-</div>
+      <button id="btnSubmitReport" class="w-full py-4 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-extrabold text-base rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 mt-4">
+        보고서 및 결과 제출하기
+      </button>
+    </section>
 
-<div>
-<label class="block text-sm text-slate-300 font-bold mb-2">1. [실험 분석] 침의 소화 작용</label>
-<p class="text-xs text-slate-400 mb-2 leading-relaxed">
-'&#x2E31;녹말+침(37℃)&#x2E31;' 시험관은 베네딕트 반응에서 황적색으로 변했지만, '&#x25AA;녹말+물(37℃)&#x25AA;' 시험관은 색 변화가 없었습니다&#x2024; 침 속에 들어있는 소화 효소의 이름과 이 효소가 녹말을 어떤 물질로 분해했는지 실험 결과와 연계하여 설명하시오&#x2024;
-</p>
-<textarea id="repSalivaAnalysis" rows="3" placeholder="답안 작성란&#x2024;&#x2024;&#x2024;&#x2024;&#x2024;" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"></textarea>
-</div>
+    <!-- ================= VIEW 4: DONE ================= -->
+    <section id="viewDone" class="hidden flex-col items-center justify-center min-h-[70vh] text-center px-4">
+      <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
+        <span class="text-4xl">🎉</span>
+      </div>
+      <h2 class="text-2xl font-bold text-white mb-2">제출이 완료되었습니다!</h2>
+      <p class="text-slate-400 text-sm mb-8">작성한 보고서와 실험 데이터가 안전하게 전송되었습니다.</p>
+      
+      <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700 w-full max-w-sm mb-8 text-left space-y-2 shadow-xl">
+        <div class="flex justify-between text-sm border-b border-slate-800 pb-2">
+          <span class="text-slate-400">제출자</span>
+          <span id="doneStudentInfo" class="text-white font-bold"></span>
+        </div>
+        <div class="flex justify-between text-sm border-b border-slate-800 py-2">
+          <span class="text-slate-400">영역3 단답형 자동채점</span>
+          <span id="doneShortAnswer" class="text-sky-400 font-bold"></span>
+        </div>
+        <div class="flex justify-between text-sm pt-2">
+          <span class="text-slate-400">객관식 퀴즈 점수</span>
+          <span id="doneQuizScore" class="text-emerald-400 font-bold"></span>
+        </div>
+      </div>
 
-<div class="border-t border-slate-800 pt-4">
-<label class="block text-sm text-slate-300 font-bold mb-2">2. [소화 과정 완결] 영양소의 최종 분해 (빈칸 채우기)</label>
-<p class="text-[11px] text-sky-400 mb-2">※ 3대 영양소가 소화관을 지나며 최종 분해되는 과정을 완성하세요.</p>
+      <button onclick="location.reload()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition border border-slate-600">
+        처음 화면으로 돌아가기
+      </button>
+    </section>
 
-<div class="space-y-3 bg-slate-900/50 p-3 rounded-lg border border-slate-800 text-[13px] text-slate-300 leading-loose">
-<p>
-<span class="text-white font-medium">탄수화물(녹말):</span> 입(아밀레이스) → 작은창자(이자액의 아밀레이스, 탄수화물 분해 효소) → 최종 산물: 
-<input type="text" id="repCarboFinal" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 ml-1">
-</p>
-<p>
-<span class="text-white font-medium">단백질:</span> 위(펩신) → 작은창자(이자액의 트립신, 단백질 분해 효소) → 최종 산물: 
-<input type="text" id="repProteinFinal" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 ml-1">
-</p>
-<p>
-<span class="text-white font-medium">지방:</span> 작은창자(쓸개즙의 쓸개 작용 + 이자액의 
-<input type="text" id="repFatEnzyme" placeholder="[ 빈칸 ]" class="inline-block bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center w-24 text-white focus:outline-none focus:border-indigo-500 mx-1">
-) → 최종 산물: [ 지방산 ] + [ 모노글리세라이드 ]
-</p>
-</div>
-</div>
-</div>
-
-<!-- Quiz Section -->
-<div class="glass-card p-4">
-<div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-emerald-950/50 text-emerald-300 text-xs font-bold mb-4">
-최종 확인 퀴즈 (객관식)
-</div>
-<div id="quizContainer" class="space-y-6"></div>
-</div>
-
-<button id="btnSubmitReport" class="w-full py-4 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-extrabold text-base rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 mt-4">
-보고서 및 결과 제출하기
-</button>
-</section>
-
-<!-- ================= VIEW 4: DONE ================= -->
-<section id="viewDone" class="hidden flex-col items-center justify-center min-h-[70vh] text-center px-4">
-<div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
-<span class="text-4xl">🎉</span>
-</div>
-<h2 class="text-2xl font-bold text-white mb-2">제출이 완료되었습니다!</h2>
-<p class="text-slate-400 text-sm mb-8">작성한 보고서와 실험 데이터가 안전하게 전송되었습니다.</p>
-
-<div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700 w-full max-w-sm mb-8 text-left space-y-2 shadow-xl">
-<div class="flex justify-between text-sm border-b border-slate-800 pb-2">
-<span class="text-slate-400">제출자</span>
-<span id="doneStudentInfo" class="text-white font-bold"></span>
-</div>
-<div class="flex justify-between text-sm border-b border-slate-800 py-2">
-<span class="text-slate-400">영역3 단답형 자동채점</span>
-<span id="doneShortAnswer" class="text-sky-400 font-bold"></span>
-</div>
-<div class="flex justify-between text-sm pt-2">
-<span class="text-slate-400">객관식 퀴즈 점수</span>
-<span id="doneQuizScore" class="text-emerald-400 font-bold"></span>
-</div>
-</div>
-
-<button onclick="location.reload()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition border border-slate-600">
-처음 화면으로 돌아가기
-</button>
-</section>
-
-<!-- Teacher Guide Modal -->
-<div id="modalTeacher" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-<div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
-<h3 class="text-lg font-bold text-white mb-2">⚙️ 교사용 구글 시트 연동 가이드</h3>
-<p class="text-xs text-slate-400 mb-4">아래 코드를 Apps Script에 배포하여 웹앱 URL을 얻고, 이 HTML 파일 상단 <code>GOOGLE_SCRIPT_URL</code>에 붙여넣으세요.</p>
-
-<div class="space-y-3">
-<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 relative">
-<textarea id="gasCodeSnippet" readonly class="w-full h-40 bg-slate-950 text-emerald-300 font-mono text-xs p-2 rounded focus:outline-none resize-none">
+    <!-- Teacher Guide Modal -->
+    <div id="modalTeacher" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+        <h3 class="text-lg font-bold text-white mb-2">⚙️ 교사용 구글 시트 연동 가이드</h3>
+        <p class="text-xs text-slate-400 mb-4">아래 코드를 Apps Script에 배포하여 웹앱 URL을 얻고, 이 HTML 파일 상단 <code>GOOGLE_SCRIPT_URL</code>에 붙여넣으세요.</p>
+        
+        <div class="space-y-3">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 relative">
+            <textarea id="gasCodeSnippet" readonly class="w-full h-40 bg-slate-950 text-emerald-300 font-mono text-xs p-2 rounded focus:outline-none resize-none">
 function doPost(e) {
-var lock = LockService.getScriptLock();
-lock.tryLock(10000);
-try {
-var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['시간', '학번', '이름', '할당용액', '클릭수', '아이오딘(색)', '베네딕트(색)', '뷰렛(색)', '수단3(색)', '발견영양소', '판단근거(서술)', '침소화분석(서술)', '탄수화물산물', '단백질산물', '지방효소', '단답형맞은개수', '객관식점수']);
-      sheet.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
       sheet.appendRow(['시간', '학번', '이름', '할당용액', '클릭수', '아이오딘(색)', '베네딕트(색)', '뷰렛(색)', '수단3(색)', '발견영양소', '판단근거(서술)', '침소화분석(서술)', '탄수화물산물', '단백질산물', '지방효소', '단답형맞은개수', '객관식점수', '붙여넣기여부']);
       sheet.getRange(1, 1, 1, 18).setFontWeight('bold').setBackground('#4a86e8').setFontColor('#ffffff');
-}
-var data = JSON.parse(e.postData.contents);
-var r = data.reportData;
-sheet.appendRow([
-data.timestamp, data.studentId, data.studentName, data.unknownSolutionId, data.activityClicks,
-      r.iodine, r.benedict, r.biuret, r.sudan, r.nutrients, r.logic_reasoning, r.saliva_analysis, r.carbo_final, r.protein_final, r.fat_enzyme, data.shortAnswerScore, data.quizScore
+    }
+    var data = JSON.parse(e.postData.contents);
+    var r = data.reportData;
+    sheet.appendRow([
+      data.timestamp, data.studentId, data.studentName, data.unknownSolutionId, data.activityClicks,
       r.iodine, r.benedict, r.biuret, r.sudan, r.nutrients, r.logic_reasoning, r.saliva_analysis, r.carbo_final, r.protein_final, r.fat_enzyme, data.shortAnswerScore, data.quizScore, data.pasteDetected
-]);
-return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
-} catch (err) {
-return ContentService.createTextOutput(JSON.stringify({ result: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
-} finally {
-lock.releaseLock();
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({ result: 'success' })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
 }
-}
-</textarea>
-            <button onclick="document.getElementById('gasCodeSnippet').select(); document.execCommand('copy'); alert('복사되었습니다.');" class="absolute top-2 right-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded">복사</button>
+            </textarea>
             <button id="btnCopyGas" class="absolute top-2 right-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold rounded-lg transition-colors duration-200 shadow-md">복사</button>
-</div>
-</div>
-<div class="mt-4 flex justify-end">
-          <button onclick="document.getElementById('modalTeacher').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-white text-sm rounded-xl">닫기</button>
+          </div>
+        </div>
+        <div class="mt-4 flex justify-end">
           <button onclick="document.getElementById('modalTeacher').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">닫기</button>
-</div>
-</div>
-</div>
+        </div>
+      </div>
+    </div>
 
-</main>
+  </main>
 
-<script>
-/* ================= APP CONFIGURATION ================= */
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRF_RUuWOxoHTDHMDP_68UGCV981bCWw5sA6Kp8CWOqzRhkCnm_wReidmxkOUUWcXd/exec"; // 선생님의 배포된 웹앱 URL을 입력하세요.
+  <script>
+    /* ================= APP CONFIGURATION ================= */
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvgTkrISMRNONgQBRc9iBHN3dVXJQzR_ibeKoPl-cT8CzaTucc_Ks-B31TWJYxc0U/exec"; // 선생님의 배포된 웹앱 URL을 입력하세요.
 
-/* ================= DOM HELPERS & STATE ================= */
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
+    /* ================= DOM HELPERS & STATE ================= */
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+    
+    const setVH = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    window.addEventListener('resize', setVH);
+    setVH();
 
-const setVH = () => document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-window.addEventListener('resize', setVH);
-setVH();
-
-const appState = {
-view: 'intro',
-studentId: '',
-studentName: '',
-unknownSolutionId: 1,
-simData: {
-clicks: 0,
-nutrientTubes: [], // 영양소 검출 시험관 상태 (보고서 전환시 유지)
-digestionTubes: [], // 소화 효소 시험관 상태
-isHeaterOn: false,
-selectedReagent: null,
-},
-reportData: {},
-quizScore: 0,
-shortAnswerScore: 0,
+    const appState = {
+      view: 'intro',
+      studentId: '',
+      studentName: '',
+      unknownSolutionId: 1,
+      simData: {
+        clicks: 0,
+        nutrientTubes: [], // 영양소 검출 시험관 상태 (보고서 전환시 유지)
+        digestionTubes: [], // 소화 효소 시험관 상태
+        isHeaterOn: false,
+        selectedReagent: null,
+      },
+      reportData: {},
+      quizScore: 0,
+      shortAnswerScore: 0,
       pasteDetected: '직접 입력',
-simMode: 'nutrient', // 'nutrient' | 'digestion'
-engine: null
-};
+      simMode: 'nutrient', // 'nutrient' | 'digestion'
+      engine: null
+    };
 
-const QUIZ_POOL = [
-{ q: "아이오딘 반응 결과가 청남색이었다면 어떤 영양소가 포함된 것인가?", options: ["녹말", "포도당", "단백질", "지방"], a: 0 },
-{ q: "베네딕트 반응 실험 시 반드시 필요한 조건은 무엇인가?", options: ["냉각", "가열", "저어주기", "빛 차단"], a: 1 },
-{ q: "뷰렛 반응에 사용되는 시약의 올바른 색상 변화는?", options: ["푸른색 -> 황적색", "옅은황갈색 -> 청남색", "푸른색 -> 보라색", "선홍색 유지"], a: 2 },
-{ q: "침 속에 들어있는 소화 효소의 이름은 무엇인가?", options: ["펩신", "라이페이스", "아밀레이스", "트립신"], a: 2 },
-{ q: "단백질이 최종적으로 분해되어 만들어지는 물질은?", options: ["포도당", "아미노산", "지방산", "글리세롤"], a: 1 },
-{ q: "쓸개즙에 대한 설명으로 옳은 것은?", options: ["소화 효소가 들어있다.", "위에서 분비된다.", "지방의 덩어리를 작게 쪼개준다.", "녹말을 분해한다."], a: 2 }
-];
-let selectedQuizzes = [];
+    const QUIZ_POOL = [
+      { q: "아이오딘 반응 결과가 청남색이었다면 어떤 영양소가 포함된 것인가?", options: ["녹말", "포도당", "단백질", "지방"], a: 0 },
+      { q: "베네딕트 반응 실험 시 반드시 필요한 조건은 무엇인가?", options: ["냉각", "가열", "저어주기", "빛 차단"], a: 1 },
+      { q: "뷰렛 반응에 사용되는 시약의 올바른 색상 변화는?", options: ["푸른색 -> 황적색", "옅은황갈색 -> 청남색", "푸른색 -> 보라색", "선홍색 유지"], a: 2 },
+      { q: "침 속에 들어있는 소화 효소의 이름은 무엇인가?", options: ["펩신", "라이페이스", "아밀레이스", "트립신"], a: 2 },
+      { q: "단백질이 최종적으로 분해되어 만들어지는 물질은?", options: ["포도당", "아미노산", "지방산", "글리세롤"], a: 1 },
+      { q: "쓸개즙에 대한 설명으로 옳은 것은?", options: ["소화 효소가 들어있다.", "위에서 분비된다.", "지방의 덩어리를 작게 쪼개준다.", "녹말을 분해한다."], a: 2 }
+    ];
+    let selectedQuizzes = [];
 
-/* ================= ROUTING & NAVIGATION ================= */
-function navigate(viewName) {
-$('#viewIntro').classList.add('hidden');
-$('#viewSim').classList.add('hidden');
-$('#viewReport').classList.add('hidden');
-$('#viewDone').classList.add('hidden');
+    /* ================= ROUTING & NAVIGATION ================= */
+    function navigate(viewName) {
+      $('#viewIntro').classList.add('hidden');
+      $('#viewSim').classList.add('hidden');
+      $('#viewReport').classList.add('hidden');
+      $('#viewDone').classList.add('hidden');
 
-appState.view = viewName;
+      appState.view = viewName;
 
-// 물리 엔진 On/Off 최적화
-if (viewName === 'sim') {
-$('#viewSim').classList.remove('hidden');
-$('#viewSim').classList.add('flex');
+      // 물리 엔진 On/Off 최적화
+      if (viewName === 'sim') {
+        $('#viewSim').classList.remove('hidden');
+        $('#viewSim').classList.add('flex');
+        
+        if(!appState.engine) {
+          appState.engine = new SimulationEngine($('#simCanvas'));
+          appState.engine.start();
+        } else {
+          // 크기 재계산 및 렌더링 재개
+          appState.engine.resize();
+          appState.engine.resume();
+        }
+      } else {
+        if(appState.engine) appState.engine.pause();
+      }
 
-if(!appState.engine) {
-appState.engine = new SimulationEngine($('#simCanvas'));
-appState.engine.start();
-} else {
-// 크기 재계산 및 렌더링 재개
-appState.engine.resize();
-appState.engine.resume();
-}
-} else {
-if(appState.engine) appState.engine.pause();
-}
+      if (viewName === 'intro') {
+        $('#viewIntro').classList.remove('hidden');
+      } else if (viewName === 'report') {
+        $('#viewReport').classList.remove('hidden');
+        $('#viewReport').classList.add('flex');
+        generateQuiz();
+      } else if (viewName === 'done') {
+        $('#viewDone').classList.remove('hidden');
+        $('#viewDone').classList.add('flex');
+      }
+      
+      window.scrollTo(0, 0);
+    }
 
-if (viewName === 'intro') {
-$('#viewIntro').classList.remove('hidden');
-} else if (viewName === 'report') {
-$('#viewReport').classList.remove('hidden');
-$('#viewReport').classList.add('flex');
-generateQuiz();
-} else if (viewName === 'done') {
-$('#viewDone').classList.remove('hidden');
-$('#viewDone').classList.add('flex');
-}
+    /* ================= SIMULATION ENGINE ================= */
+    class SimulationEngine {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: false });
+        this.isRunning = false;
+        this.particles = [];
+        
+        // 초기 1회 동기 리사이즈
+        this.resize();
+        
+        // 리사이즈 옵저버로 화면 크기 변경 대응
+        this.resizeObserver = new ResizeObserver(() => this.resize());
+        this.resizeObserver.observe(this.canvas.parentElement);
 
-window.scrollTo(0, 0);
-}
+        // 이벤트 리스너 (캔버스에만 터치 허용)
+        this.canvas.addEventListener('touchstart', this.handleTouch.bind(this), { passive: false });
+        this.canvas.addEventListener('mousedown', this.handleMouse.bind(this));
+        
+        this.initScenes();
+      }
 
-/* ================= SIMULATION ENGINE ================= */
-class SimulationEngine {
-constructor(canvas) {
-this.canvas = canvas;
-this.ctx = canvas.getContext('2d', { alpha: false });
-this.isRunning = false;
-this.particles = [];
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.scale(dpr, dpr);
+        this.width = rect.width;
+        this.height = rect.height;
+        if(!this.isRunning) this.draw(); // 멈춰있을 때 리사이즈 되면 한번 그려줌
+      }
 
-// 초기 1회 동기 리사이즈
-this.resize();
+      initScenes() {
+        // 학번에 따른 미지용액 속성 결정 (1~5번)
+        const sId = appState.unknownSolutionId;
+        // 1:녹말+단백질, 2:포도당+지방, 3:녹말+포도당, 4:단백질+지방, 5:포도당+단백질+지방
+        const solData = {
+          1: { starch: true, glucose: false, protein: true, fat: false },
+          2: { starch: false, glucose: true, protein: false, fat: true },
+          3: { starch: true, glucose: true, protein: false, fat: false },
+          4: { starch: false, glucose: false, protein: true, fat: true },
+          5: { starch: false, glucose: true, protein: true, fat: true }
+        };
+        this.hiddenNutrients = solData[sId];
 
-// 리사이즈 옵저버로 화면 크기 변경 대응
-this.resizeObserver = new ResizeObserver(() => this.resize());
-this.resizeObserver.observe(this.canvas.parentElement);
+        // 튜브 배열이 비어있을 때만 초기화 (보고서 다녀와도 유지하기 위함)
+        if(appState.simData.nutrientTubes.length === 0) {
+          appState.simData.nutrientTubes = [
+            { id: 0, label: '아이오딘 반응', target: 'iodine', color: '#e2e8f0', added: false },
+            { id: 1, label: '베네딕트 반응', target: 'benedict', color: '#e2e8f0', added: false },
+            { id: 2, label: '뷰렛 반응', target: 'biuret', color: '#e2e8f0', added: false },
+            { id: 3, label: '수단 Ⅲ 반응', target: 'sudan', color: '#e2e8f0', added: false }
+          ];
+        }
 
-// 이벤트 리스너 (캔버스에만 터치 허용)
-this.canvas.addEventListener('touchstart', this.handleTouch.bind(this), { passive: false });
-this.canvas.addEventListener('mousedown', this.handleMouse.bind(this));
+        if(appState.simData.digestionTubes.length === 0) {
+          appState.simData.digestionTubes = [
+            { id: 0, label: '녹말 + 침', hasBenedict: false, color: '#e2e8f0' },
+            { id: 1, label: '녹말 + 물', hasBenedict: false, color: '#e2e8f0' }
+          ];
+        }
+      }
 
-this.initScenes();
-}
+      getTubes() {
+        return appState.simMode === 'nutrient' ? appState.simData.nutrientTubes : appState.simData.digestionTubes;
+      }
 
-resize() {
-const rect = this.canvas.parentElement.getBoundingClientRect();
-if (rect.width === 0 || rect.height === 0) return;
-const dpr = Math.min(window.devicePixelRatio || 1, 2);
-this.canvas.width = rect.width * dpr;
-this.canvas.height = rect.height * dpr;
-this.ctx.scale(dpr, dpr);
-this.width = rect.width;
-this.height = rect.height;
-if(!this.isRunning) this.draw(); // 멈춰있을 때 리사이즈 되면 한번 그려줌
-}
+      handleInput(x, y) {
+        appState.simData.clicks++;
+        const tubes = this.getTubes();
+        const gap = this.width / (tubes.length + 1);
+        const startY = this.height * 0.35;
+        const tubeW = Math.min(45, this.width * 0.15);
+        const tubeH = this.height * 0.45;
 
-initScenes() {
-// 학번에 따른 미지용액 속성 결정 (1~5번)
-const sId = appState.unknownSolutionId;
-// 1:녹말+단백질, 2:포도당+지방, 3:녹말+포도당, 4:단백질+지방, 5:포도당+단백질+지방
-const solData = {
-1: { starch: true, glucose: false, protein: true, fat: false },
-2: { starch: false, glucose: true, protein: false, fat: true },
-3: { starch: true, glucose: true, protein: false, fat: false },
-4: { starch: false, glucose: false, protein: true, fat: true },
-5: { starch: false, glucose: true, protein: true, fat: true }
-};
-this.hiddenNutrients = solData[sId];
+        tubes.forEach((t, i) => {
+          const tx = gap * (i + 1) - tubeW/2;
+          if (x > tx && x < tx + tubeW && y > startY && y < startY + tubeH) {
+            this.interactWithTube(t);
+          }
+        });
+      }
 
-// 튜브 배열이 비어있을 때만 초기화 (보고서 다녀와도 유지하기 위함)
-if(appState.simData.nutrientTubes.length === 0) {
-appState.simData.nutrientTubes = [
-{ id: 0, label: '아이오딘 반응', target: 'iodine', color: '#e2e8f0', added: false },
-{ id: 1, label: '베네딕트 반응', target: 'benedict', color: '#e2e8f0', added: false },
-{ id: 2, label: '뷰렛 반응', target: 'biuret', color: '#e2e8f0', added: false },
-{ id: 3, label: '수단 Ⅲ 반응', target: 'sudan', color: '#e2e8f0', added: false }
-];
-}
+      handleTouch(e) {
+        e.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.touches[0].clientX - rect.left;
+        const y = e.touches[0].clientY - rect.top;
+        this.handleInput(x, y);
+      }
 
-if(appState.simData.digestionTubes.length === 0) {
-appState.simData.digestionTubes = [
-{ id: 0, label: '녹말 + 침', hasBenedict: false, color: '#e2e8f0' },
-{ id: 1, label: '녹말 + 물', hasBenedict: false, color: '#e2e8f0' }
-];
-}
-}
+      handleMouse(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        this.handleInput(x, y);
+      }
 
-getTubes() {
-return appState.simMode === 'nutrient' ? appState.simData.nutrientTubes : appState.simData.digestionTubes;
-}
+      interactWithTube(tube) {
+        const reagent = appState.simData.selectedReagent;
+        if(!reagent) return;
 
-handleInput(x, y) {
-appState.simData.clicks++;
-const tubes = this.getTubes();
-const gap = this.width / (tubes.length + 1);
-const startY = this.height * 0.35;
-const tubeW = Math.min(45, this.width * 0.15);
-const tubeH = this.height * 0.45;
+        // 파티클 생성
+        const gap = this.width / (this.getTubes().length + 1);
+        for(let i=0; i<10; i++) {
+          this.particles.push({
+            x: gap * (tube.id + 1) + (Math.random()*20-10),
+            y: this.height * 0.35 - 20,
+            vy: Math.random() * 2 + 2,
+            life: 1.0,
+            color: this.getReagentColor(reagent)
+          });
+        }
 
-tubes.forEach((t, i) => {
-const tx = gap * (i + 1) - tubeW/2;
-if (x > tx && x < tx + tubeW && y > startY && y < startY + tubeH) {
-this.interactWithTube(t);
-}
-});
-}
+        // 반응 로직
+        if(appState.simMode === 'nutrient') {
+          if (reagent === 'iodine' && tube.target === 'iodine') {
+            tube.added = true;
+            tube.color = this.hiddenNutrients.starch ? '#1e1b4b' : '#a16207'; // 청남색 vs 옅은황갈색
+          } 
+          else if (reagent === 'benedict' && tube.target === 'benedict') {
+            tube.added = true;
+            tube.color = '#38bdf8'; // 투입 직후 푸른색
+          }
+          else if (reagent === 'biuret' && tube.target === 'biuret') {
+            tube.added = true;
+            tube.color = this.hiddenNutrients.protein ? '#c084fc' : '#38bdf8'; // 보라색 vs 푸른색
+          }
+          else if (reagent === 'sudan' && tube.target === 'sudan') {
+            tube.added = true;
+            tube.color = this.hiddenNutrients.fat ? '#f43f5e' : '#fda4af'; // 선홍색 vs 옅은 붉은색
+          }
+        } 
+        else {
+          if (reagent === 'benedict') {
+            tube.hasBenedict = true;
+            tube.color = '#38bdf8';
+          }
+        }
+      }
 
-handleTouch(e) {
-e.preventDefault();
-const rect = this.canvas.getBoundingClientRect();
-const x = e.touches[0].clientX - rect.left;
-const y = e.touches[0].clientY - rect.top;
-this.handleInput(x, y);
-}
+      getReagentColor(r) {
+        const colors = { 'iodine': '#a16207', 'benedict': '#38bdf8', 'biuret': '#818cf8', 'sudan': '#f43f5e' };
+        return colors[r] || '#fff';
+      }
 
-handleMouse(e) {
-const rect = this.canvas.getBoundingClientRect();
-const x = e.clientX - rect.left;
-const y = e.clientY - rect.top;
-this.handleInput(x, y);
-}
+      update(dt) {
+        // 파티클 업데이트
+        for(let i = this.particles.length-1; i>=0; i--) {
+          let p = this.particles[i];
+          p.y += p.vy;
+          p.life -= 0.03;
+          if(p.life <= 0) this.particles.splice(i, 1);
+        }
 
-interactWithTube(tube) {
-const reagent = appState.simData.selectedReagent;
-if(!reagent) return;
+        // 베네딕트 가열 반응 계속 체크
+        if(appState.simData.isHeaterOn) {
+          const tbs = this.getTubes();
+          if (appState.simMode === 'nutrient') {
+            const benTube = tbs[1];
+            if(benTube && benTube.added && this.hiddenNutrients.glucose) benTube.color = '#ea580c'; // 황적색
+          } else {
+            // 영역 3 (녹말+침은 포도당(엿당)으로 분해됨)
+            if(tbs[0] && tbs[0].hasBenedict) tbs[0].color = '#ea580c'; // 황적색
+          }
+        }
+      }
 
-// 파티클 생성
-const gap = this.width / (this.getTubes().length + 1);
-for(let i=0; i<10; i++) {
-this.particles.push({
-x: gap * (tube.id + 1) + (Math.random()*20-10),
-y: this.height * 0.35 - 20,
-vy: Math.random() * 2 + 2,
-life: 1.0,
-color: this.getReagentColor(reagent)
-});
-}
+      draw() {
+        if(!this.ctx) return;
+        
+        // 배경 그리기
+        const bgGrad = this.ctx.createRadialGradient(this.width/2, this.height*0.3, 0, this.width/2, this.height, this.height);
+        bgGrad.addColorStop(0, '#1e293b');
+        bgGrad.addColorStop(1, '#090d16');
+        this.ctx.fillStyle = bgGrad;
+        this.ctx.fillRect(0, 0, this.width, this.height);
 
-// 반응 로직
-if(appState.simMode === 'nutrient') {
-if (reagent === 'iodine' && tube.target === 'iodine') {
-tube.added = true;
-tube.color = this.hiddenNutrients.starch ? '#1e1b4b' : '#a16207'; // 청남색 vs 옅은황갈색
-} 
-else if (reagent === 'benedict' && tube.target === 'benedict') {
-tube.added = true;
-tube.color = '#38bdf8'; // 투입 직후 푸른색
-}
-else if (reagent === 'biuret' && tube.target === 'biuret') {
-tube.added = true;
-tube.color = this.hiddenNutrients.protein ? '#c084fc' : '#38bdf8'; // 보라색 vs 푸른색
-}
-else if (reagent === 'sudan' && tube.target === 'sudan') {
-tube.added = true;
-tube.color = this.hiddenNutrients.fat ? '#f43f5e' : '#fda4af'; // 선홍색 vs 옅은 붉은색
-}
-} 
-else {
-if (reagent === 'benedict') {
-tube.hasBenedict = true;
-tube.color = '#38bdf8';
-}
-}
-}
+        const tubes = this.getTubes();
+        const gap = this.width / (tubes.length + 1);
+        const startY = this.height * 0.35;
+        const tubeW = Math.min(45, this.width * 0.15);
+        const tubeH = this.height * 0.45;
 
-getReagentColor(r) {
-const colors = { 'iodine': '#a16207', 'benedict': '#38bdf8', 'biuret': '#818cf8', 'sudan': '#f43f5e' };
-return colors[r] || '#fff';
-}
+        // 가열 장치 효과
+        if (appState.simData.isHeaterOn) {
+          this.ctx.save();
+          this.ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+          this.ctx.shadowColor = '#ef4444';
+          this.ctx.shadowBlur = 30;
+          this.ctx.fillRect(0, startY + tubeH - 20, this.width, 40);
+          
+          this.ctx.fillStyle = '#fbbf24';
+          for(let i=0; i<8; i++) {
+            this.ctx.beginPath();
+            this.ctx.arc(Math.random()*this.width, startY + tubeH - 10 + Math.random()*30, Math.random()*3+2, 0, Math.PI*2);
+            this.ctx.fill();
+          }
+          this.ctx.restore();
+        }
 
-update(dt) {
-// 파티클 업데이트
-for(let i = this.particles.length-1; i>=0; i--) {
-let p = this.particles[i];
-p.y += p.vy;
-p.life -= 0.03;
-if(p.life <= 0) this.particles.splice(i, 1);
-}
+        // 시험관 그리기
+        tubes.forEach((t, i) => {
+          const tx = gap * (i + 1) - tubeW/2;
+          const ty = startY;
 
-// 베네딕트 가열 반응 계속 체크
-if(appState.simData.isHeaterOn) {
-const tbs = this.getTubes();
-if (appState.simMode === 'nutrient') {
-const benTube = tbs[1];
-if(benTube && benTube.added && this.hiddenNutrients.glucose) benTube.color = '#ea580c'; // 황적색
-} else {
-// 영역 3 (녹말+침은 포도당(엿당)으로 분해됨)
-if(tbs[0] && tbs[0].hasBenedict) tbs[0].color = '#ea580c'; // 황적색
-}
-}
-}
+          // 액체 내용물
+          this.ctx.fillStyle = t.color;
+          this.ctx.beginPath();
+          this.ctx.roundRect(tx + 3, ty + tubeH*0.4, tubeW - 6, tubeH*0.6 - 3, [0, 0, tubeW/2, tubeW/2]);
+          this.ctx.fill();
 
-draw() {
-if(!this.ctx) return;
+          // 시험관 유리 테두리
+          this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+          this.ctx.lineWidth = 3;
+          this.ctx.beginPath();
+          this.ctx.roundRect(tx, ty, tubeW, tubeH, [0, 0, tubeW/2, tubeW/2]);
+          this.ctx.stroke();
+          
+          // 유리 반사광
+          this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          this.ctx.fillRect(tx + 6, ty + 10, 4, tubeH - 20);
 
-// 배경 그리기
-const bgGrad = this.ctx.createRadialGradient(this.width/2, this.height*0.3, 0, this.width/2, this.height, this.height);
-bgGrad.addColorStop(0, '#1e293b');
-bgGrad.addColorStop(1, '#090d16');
-this.ctx.fillStyle = bgGrad;
-this.ctx.fillRect(0, 0, this.width, this.height);
+          // 라벨 텍스트
+          this.ctx.fillStyle = '#cbd5e1';
+          this.ctx.font = 'bold 12px Pretendard';
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText(t.label, tx + tubeW/2, ty - 20);
+        });
 
-const tubes = this.getTubes();
-const gap = this.width / (tubes.length + 1);
-const startY = this.height * 0.35;
-const tubeW = Math.min(45, this.width * 0.15);
-const tubeH = this.height * 0.45;
+        // 파티클 그리기
+        this.particles.forEach(p => {
+          this.ctx.globalAlpha = p.life;
+          this.ctx.fillStyle = p.color;
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+          this.ctx.fill();
+        });
+        this.ctx.globalAlpha = 1.0;
+      }
 
-// 가열 장치 효과
-if (appState.simData.isHeaterOn) {
-this.ctx.save();
-this.ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
-this.ctx.shadowColor = '#ef4444';
-this.ctx.shadowBlur = 30;
-this.ctx.fillRect(0, startY + tubeH - 20, this.width, 40);
+      start() {
+        if (!this.isRunning) {
+          this.isRunning = true;
+          this.lastTime = performance.now();
+          this.loop();
+        }
+      }
+      pause() { this.isRunning = false; }
+      resume() { this.start(); }
 
-this.ctx.fillStyle = '#fbbf24';
-for(let i=0; i<8; i++) {
-this.ctx.beginPath();
-this.ctx.arc(Math.random()*this.width, startY + tubeH - 10 + Math.random()*30, Math.random()*3+2, 0, Math.PI*2);
-this.ctx.fill();
-}
-this.ctx.restore();
-}
+      loop() {
+        if (!this.isRunning) return;
+        const now = performance.now();
+        const dt = now - this.lastTime;
+        this.lastTime = now;
+        
+        try {
+          this.update(dt);
+          this.draw();
+        } catch(e) {
+          showError(e);
+          return;
+        }
+        requestAnimationFrame(this.loop.bind(this));
+      }
+    }
 
-// 시험관 그리기
-tubes.forEach((t, i) => {
-const tx = gap * (i + 1) - tubeW/2;
-const ty = startY;
+    /* ================= UI EVENT LISTENERS ================= */
+    
+    function updateSimUI() {
+      const wrapper = $('#simUIOverlay');
+      wrapper.innerHTML = '';
+      
+      if(appState.simMode === 'nutrient') {
+        const reagents = [
+          {id: 'iodine', name: '아이오딘', bg: 'bg-amber-900', border: 'border-amber-600'},
+          {id: 'benedict', name: '베네딕트', bg: 'bg-sky-900', border: 'border-sky-600'},
+          {id: 'biuret', name: '뷰렛', bg: 'bg-indigo-900', border: 'border-indigo-600'},
+          {id: 'sudan', name: '수단 Ⅲ', bg: 'bg-rose-900', border: 'border-rose-600'}
+        ];
+        reagents.forEach(r => {
+          const btn = document.createElement('button');
+          btn.className = `pointer-events-auto flex-1 py-2 text-[10px] sm:text-[11px] font-bold rounded-xl border transition text-white ${r.bg} ${r.border} ${appState.simData.selectedReagent === r.id ? 'ring-2 ring-white scale-105' : 'opacity-70'}`;
+          btn.innerText = r.name;
+          btn.onclick = () => {
+            appState.simData.selectedReagent = r.id;
+            updateSimUI();
+            $('#canvasStatusText').innerText = `💧 ${r.name} 선택 완료. 반응시킬 시험관을 터치하세요.`;
+          };
+          wrapper.appendChild(btn);
+        });
+      } else {
+        const btn = document.createElement('button');
+        btn.className = `pointer-events-auto px-6 py-2.5 text-xs font-bold rounded-xl border transition text-white bg-sky-900 border-sky-600 ${appState.simData.selectedReagent === 'benedict' ? 'ring-2 ring-white scale-105' : 'opacity-80'}`;
+        btn.innerText = '베네딕트 용액 선택';
+        btn.onclick = () => {
+          appState.simData.selectedReagent = 'benedict';
+          updateSimUI();
+          $('#canvasStatusText').innerText = `💧 베네딕트 용액 선택 완료. 시험관을 터치하세요.`;
+        };
+        wrapper.appendChild(btn);
+      }
+    }
 
-// 액체 내용물
-this.ctx.fillStyle = t.color;
-this.ctx.beginPath();
-this.ctx.roundRect(tx + 3, ty + tubeH*0.4, tubeW - 6, tubeH*0.6 - 3, [0, 0, tubeW/2, tubeW/2]);
-this.ctx.fill();
+    // Intro -> Start
+    $('#introStudentId').addEventListener('input', (e) => {
+      const sid = e.target.value.trim();
+      if(sid.length >= 2) {
+        const hash = Array.from(sid).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        $('#allocatedSampleBadge').innerText = `미지의 용액 [ ${(hash % 5) + 1} ] 번`;
+      }
+    });
 
-// 시험관 유리 테두리
-this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-this.ctx.lineWidth = 3;
-this.ctx.beginPath();
-this.ctx.roundRect(tx, ty, tubeW, tubeH, [0, 0, tubeW/2, tubeW/2]);
-this.ctx.stroke();
+    $('#btnStartSim').addEventListener('click', () => {
+      const sid = $('#introStudentId').value.trim();
+      const sname = $('#introStudentName').value.trim();
+      if(sid.length < 4 || sname.length < 2) return alert("학번과 이름을 정확히 입력해주세요.");
+      
+      appState.studentId = sid;
+      appState.studentName = sname;
+      
+      const hash = Array.from(sid).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      appState.unknownSolutionId = (hash % 5) + 1;
+      
+      $('#labHeaderStudent').innerText = `${sid} ${sname}`;
+      $('#repSolutionNumber').innerText = appState.unknownSolutionId;
 
-// 유리 반사광
-this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-this.ctx.fillRect(tx + 6, ty + 10, 4, tubeH - 20);
+      navigate('sim');
+      updateSimUI();
+    });
 
-// 라벨 텍스트
-this.ctx.fillStyle = '#cbd5e1';
-this.ctx.font = 'bold 12px Pretendard';
-this.ctx.textAlign = 'center';
-this.ctx.fillText(t.label, tx + tubeW/2, ty - 20);
-});
+    // Lab Controls
+    $('#btnResetLab').addEventListener('click', () => {
+      appState.simData.nutrientTubes = [];
+      appState.simData.digestionTubes = [];
+      appState.simData.isHeaterOn = false;
+      appState.simData.selectedReagent = null;
+      
+      $('#btnBurner').classList.replace('bg-rose-600', 'bg-rose-950/80');
+      $('#btnBurner').classList.replace('text-white', 'text-rose-300');
+      
+      if(appState.engine) appState.engine.initScenes();
+      updateSimUI();
+    });
 
-// 파티클 그리기
-this.particles.forEach(p => {
-this.ctx.globalAlpha = p.life;
-this.ctx.fillStyle = p.color;
-this.ctx.beginPath();
-this.ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
-this.ctx.fill();
-});
-this.ctx.globalAlpha = 1.0;
-}
+    $('#btnBurner').addEventListener('click', () => {
+      appState.simData.isHeaterOn = !appState.simData.isHeaterOn;
+      const btn = $('#btnBurner');
+      if(appState.simData.isHeaterOn) {
+        btn.classList.replace('bg-rose-950/80', 'bg-rose-600');
+        btn.classList.replace('text-rose-300', 'text-white');
+      } else {
+        btn.classList.replace('bg-rose-600', 'bg-rose-950/80');
+        btn.classList.replace('text-white', 'text-rose-300');
+      }
+    });
 
-start() {
-if (!this.isRunning) {
-this.isRunning = true;
-this.lastTime = performance.now();
-this.loop();
-}
-}
-pause() { this.isRunning = false; }
-resume() { this.start(); }
+    $('#tabModeNutrient').addEventListener('click', () => {
+      appState.simMode = 'nutrient';
+      appState.simData.selectedReagent = null;
+      $('#tabModeNutrient').className = "py-2 text-xs font-bold rounded-xl bg-sky-500 text-slate-950";
+      $('#tabModeDigestion').className = "py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
+      updateSimUI();
+    });
 
-loop() {
-if (!this.isRunning) return;
-const now = performance.now();
-const dt = now - this.lastTime;
-this.lastTime = now;
+    $('#tabModeDigestion').addEventListener('click', () => {
+      appState.simMode = 'digestion';
+      appState.simData.selectedReagent = null;
+      $('#tabModeDigestion').className = "py-2 text-xs font-bold rounded-xl bg-sky-500 text-slate-950";
+      $('#tabModeNutrient').className = "py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
+      updateSimUI();
+    });
 
-try {
-this.update(dt);
-this.draw();
-} catch(e) {
-showError(e);
-return;
-}
-requestAnimationFrame(this.loop.bind(this));
-}
-}
+    // Navigation
+    $('#btnGoToReport').addEventListener('click', () => navigate('report'));
+    $('#btnBackToSim').addEventListener('click', () => navigate('sim')); // 실험실로 돌아가기 (상태 유지됨)
 
-/* ================= UI EVENT LISTENERS ================= */
-
-function updateSimUI() {
-const wrapper = $('#simUIOverlay');
-wrapper.innerHTML = '';
-
-if(appState.simMode === 'nutrient') {
-const reagents = [
-{id: 'iodine', name: '아이오딘', bg: 'bg-amber-900', border: 'border-amber-600'},
-{id: 'benedict', name: '베네딕트', bg: 'bg-sky-900', border: 'border-sky-600'},
-{id: 'biuret', name: '뷰렛', bg: 'bg-indigo-900', border: 'border-indigo-600'},
-{id: 'sudan', name: '수단 Ⅲ', bg: 'bg-rose-900', border: 'border-rose-600'}
-];
-reagents.forEach(r => {
-const btn = document.createElement('button');
-btn.className = `pointer-events-auto flex-1 py-2 text-[10px] sm:text-[11px] font-bold rounded-xl border transition text-white ${r.bg} ${r.border} ${appState.simData.selectedReagent === r.id ? 'ring-2 ring-white scale-105' : 'opacity-70'}`;
-btn.innerText = r.name;
-btn.onclick = () => {
-appState.simData.selectedReagent = r.id;
-updateSimUI();
-$('#canvasStatusText').innerText = `💧 ${r.name} 선택 완료. 반응시킬 시험관을 터치하세요.`;
-};
-wrapper.appendChild(btn);
-});
-} else {
-const btn = document.createElement('button');
-btn.className = `pointer-events-auto px-6 py-2.5 text-xs font-bold rounded-xl border transition text-white bg-sky-900 border-sky-600 ${appState.simData.selectedReagent === 'benedict' ? 'ring-2 ring-white scale-105' : 'opacity-80'}`;
-btn.innerText = '베네딕트 용액 선택';
-btn.onclick = () => {
-appState.simData.selectedReagent = 'benedict';
-updateSimUI();
-$('#canvasStatusText').innerText = `💧 베네딕트 용액 선택 완료. 시험관을 터치하세요.`;
-};
-wrapper.appendChild(btn);
-}
-}
-
-// Intro -> Start
-$('#introStudentId').addEventListener('input', (e) => {
-const sid = e.target.value.trim();
-if(sid.length >= 2) {
-const hash = Array.from(sid).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-$('#allocatedSampleBadge').innerText = `미지의 용액 [ ${(hash % 5) + 1} ] 번`;
-}
-});
-
-$('#btnStartSim').addEventListener('click', () => {
-const sid = $('#introStudentId').value.trim();
-const sname = $('#introStudentName').value.trim();
-if(sid.length < 4 || sname.length < 2) return alert("학번과 이름을 정확히 입력해주세요.");
-
-appState.studentId = sid;
-appState.studentName = sname;
-
-const hash = Array.from(sid).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-appState.unknownSolutionId = (hash % 5) + 1;
-
-$('#labHeaderStudent').innerText = `${sid} ${sname}`;
-$('#repSolutionNumber').innerText = appState.unknownSolutionId;
-
-navigate('sim');
-updateSimUI();
-});
-
-// Lab Controls
-$('#btnResetLab').addEventListener('click', () => {
-appState.simData.nutrientTubes = [];
-appState.simData.digestionTubes = [];
-appState.simData.isHeaterOn = false;
-appState.simData.selectedReagent = null;
-
-$('#btnBurner').classList.replace('bg-rose-600', 'bg-rose-950/80');
-$('#btnBurner').classList.replace('text-white', 'text-rose-300');
-
-if(appState.engine) appState.engine.initScenes();
-updateSimUI();
-});
-
-$('#btnBurner').addEventListener('click', () => {
-appState.simData.isHeaterOn = !appState.simData.isHeaterOn;
-const btn = $('#btnBurner');
-if(appState.simData.isHeaterOn) {
-btn.classList.replace('bg-rose-950/80', 'bg-rose-600');
-btn.classList.replace('text-rose-300', 'text-white');
-} else {
-btn.classList.replace('bg-rose-600', 'bg-rose-950/80');
-btn.classList.replace('text-white', 'text-rose-300');
-}
-});
-
-$('#tabModeNutrient').addEventListener('click', () => {
-appState.simMode = 'nutrient';
-appState.simData.selectedReagent = null;
-$('#tabModeNutrient').className = "py-2 text-xs font-bold rounded-xl bg-sky-500 text-slate-950";
-$('#tabModeDigestion').className = "py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
-updateSimUI();
-});
-
-$('#tabModeDigestion').addEventListener('click', () => {
-appState.simMode = 'digestion';
-appState.simData.selectedReagent = null;
-$('#tabModeDigestion').className = "py-2 text-xs font-bold rounded-xl bg-sky-500 text-slate-950";
-$('#tabModeNutrient').className = "py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white";
-updateSimUI();
-});
-
-// Navigation
-$('#btnGoToReport').addEventListener('click', () => navigate('report'));
-$('#btnBackToSim').addEventListener('click', () => navigate('sim')); // 실험실로 돌아가기 (상태 유지됨)
-
-$('#btnOpenTeacherGuide').addEventListener('click', () => $('#modalTeacher').classList.remove('hidden'));
+    $('#btnOpenTeacherGuide').addEventListener('click', () => $('#modalTeacher').classList.remove('hidden'));
 
     // 교사용 가이드 복사 버튼 기능 개선 (alert 팝업 제거 및 버튼 UI 변경 애니메이션 적용)
     $('#btnCopyGas').addEventListener('click', function() {
@@ -858,129 +852,128 @@ $('#btnOpenTeacherGuide').addEventListener('click', () => $('#modalTeacher').cla
       });
     });
 
-/* ================= QUIZ & SUBMIT ================= */
+    /* ================= QUIZ & SUBMIT ================= */
+    
+    function generateQuiz() {
+      const container = $('#quizContainer');
+      if(container.innerHTML !== '') return;
 
-function generateQuiz() {
-const container = $('#quizContainer');
-if(container.innerHTML !== '') return;
+      const shuffled = [...QUIZ_POOL].sort(() => 0.5 - Math.random()).slice(0, 3);
+      selectedQuizzes = shuffled;
 
-const shuffled = [...QUIZ_POOL].sort(() => 0.5 - Math.random()).slice(0, 3);
-selectedQuizzes = shuffled;
+      shuffled.forEach((q, idx) => {
+        const qDiv = document.createElement('div');
+        qDiv.className = 'border-b border-slate-700 pb-3 last:border-0 last:pb-0';
+        qDiv.innerHTML = `
+          <p class="text-[13px] text-slate-200 mb-2 font-medium"><span class="text-emerald-400 font-bold mr-1">Q${idx+1}.</span> ${q.q}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            ${q.options.map((opt, oIdx) => `
+              <label class="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700 cursor-pointer hover:bg-slate-800 transition">
+                <input type="radio" name="quiz_${idx}" value="${oIdx}" class="w-3 h-3">
+                <span class="text-xs text-slate-300">${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(qDiv);
+      });
+    }
 
-shuffled.forEach((q, idx) => {
-const qDiv = document.createElement('div');
-qDiv.className = 'border-b border-slate-700 pb-3 last:border-0 last:pb-0';
-qDiv.innerHTML = `
-         <p class="text-[13px] text-slate-200 mb-2 font-medium"><span class="text-emerald-400 font-bold mr-1">Q${idx+1}.</span> ${q.q}</p>
-         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-           ${q.options.map((opt, oIdx) => `
-             <label class="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700 cursor-pointer hover:bg-slate-800 transition">
-               <input type="radio" name="quiz_${idx}" value="${oIdx}" class="w-3 h-3">
-               <span class="text-xs text-slate-300">${opt}</span>
-             </label>
-           `).join('')}
-         </div>
-       `;
-container.appendChild(qDiv);
-});
-}
+    $('#btnSubmitReport').addEventListener('click', async () => {
+      const btn = $('#btnSubmitReport');
+      
+      // 퀴즈 채점
+      let correctCount = 0;
+      let allAnswered = true;
+      selectedQuizzes.forEach((q, idx) => {
+        const selected = document.querySelector(`input[name="quiz_${idx}"]:checked`);
+        if(!selected) allAnswered = false;
+        else if (parseInt(selected.value) === q.a) correctCount++;
+      });
+      if(!allAnswered) return alert("객관식 퀴즈 문항을 모두 풀어주세요.");
+      appState.quizScore = Math.round((correctCount / 3) * 100);
 
-$('#btnSubmitReport').addEventListener('click', async () => {
-const btn = $('#btnSubmitReport');
+      // 단답형 채점 (띄어쓰기 무시)
+      const clean = (str) => (str || '').replace(/\s+/g, '');
+      const ansCarbo = clean($('#repCarboFinal').value);
+      const ansProtein = clean($('#repProteinFinal').value);
+      const ansFat = clean($('#repFatEnzyme').value);
+      
+      let saScore = 0;
+      if(ansCarbo === '포도당') saScore++;
+      if(ansProtein === '아미노산') saScore++;
+      if(ansFat === '라이페이스') saScore++;
+      appState.shortAnswerScore = saScore;
 
-// 퀴즈 채점
-let correctCount = 0;
-let allAnswered = true;
-selectedQuizzes.forEach((q, idx) => {
-const selected = document.querySelector(`input[name="quiz_${idx}"]:checked`);
-if(!selected) allAnswered = false;
-else if (parseInt(selected.value) === q.a) correctCount++;
-});
-if(!allAnswered) return alert("객관식 퀴즈 문항을 모두 풀어주세요.");
-appState.quizScore = Math.round((correctCount / 3) * 100);
+      // 폼 데이터 수합
+      appState.reportData = {
+        iodine: $('#repIodine').value.trim(),
+        benedict: $('#repBenedict').value.trim(),
+        biuret: $('#repBiuret').value.trim(),
+        sudan: $('#repSudan').value.trim(),
+        nutrients: $('#repNutrients').value.trim(),
+        logic_reasoning: $('#repReasoning').value.trim(),
+        saliva_analysis: $('#repSalivaAnalysis').value.trim(),
+        carbo_final: $('#repCarboFinal').value.trim(),
+        protein_final: $('#repProteinFinal').value.trim(),
+        fat_enzyme: $('#repFatEnzyme').value.trim()
+      };
 
-// 단답형 채점 (띄어쓰기 무시)
-const clean = (str) => (str || '').replace(/\s+/g, '');
-const ansCarbo = clean($('#repCarboFinal').value);
-const ansProtein = clean($('#repProteinFinal').value);
-const ansFat = clean($('#repFatEnzyme').value);
-
-let saScore = 0;
-if(ansCarbo === '포도당') saScore++;
-if(ansProtein === '아미노산') saScore++;
-if(ansFat === '라이페이스') saScore++;
-appState.shortAnswerScore = saScore;
-
-// 폼 데이터 수합
-appState.reportData = {
-iodine: $('#repIodine').value.trim(),
-benedict: $('#repBenedict').value.trim(),
-biuret: $('#repBiuret').value.trim(),
-sudan: $('#repSudan').value.trim(),
-nutrients: $('#repNutrients').value.trim(),
-logic_reasoning: $('#repReasoning').value.trim(),
-saliva_analysis: $('#repSalivaAnalysis').value.trim(),
-carbo_final: $('#repCarboFinal').value.trim(),
-protein_final: $('#repProteinFinal').value.trim(),
-fat_enzyme: $('#repFatEnzyme').value.trim()
-};
-
-const payload = {
-timestamp: new Date().toLocaleString(),
-studentId: appState.studentId,
-studentName: appState.studentName,
-unknownSolutionId: appState.unknownSolutionId,
-activityClicks: appState.simData.clicks,
-reportData: appState.reportData,
-shortAnswerScore: appState.shortAnswerScore,
-        quizScore: appState.quizScore
+      const payload = {
+        timestamp: new Date().toLocaleString(),
+        studentId: appState.studentId,
+        studentName: appState.studentName,
+        unknownSolutionId: appState.unknownSolutionId,
+        activityClicks: appState.simData.clicks,
+        reportData: appState.reportData,
+        shortAnswerScore: appState.shortAnswerScore,
         quizScore: appState.quizScore,
         pasteDetected: appState.pasteDetected
-};
+      };
 
-btn.disabled = true;
-btn.innerText = "제출 중...";
+      btn.disabled = true;
+      btn.innerText = "제출 중...";
 
-try {
-if (GOOGLE_SCRIPT_URL) {
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 8000);
-await fetch(GOOGLE_SCRIPT_URL, {
-method: 'POST',
-mode: 'no-cors',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(payload),
-signal: controller.signal
-});
-clearTimeout(timeoutId);
-} else {
-await new Promise(r => setTimeout(r, 800)); // 가짜 딜레이
-}
+      try {
+        if (GOOGLE_SCRIPT_URL) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } else {
+          await new Promise(r => setTimeout(r, 800)); // 가짜 딜레이
+        }
 
-$('#doneStudentInfo').innerText = `${appState.studentId} ${appState.studentName}`;
-$('#doneShortAnswer').innerText = `${appState.shortAnswerScore}개 정답 (3점 만점)`;
-$('#doneQuizScore').innerText = `${appState.quizScore}점 (${correctCount}/3)`;
-navigate('done');
+        $('#doneStudentInfo').innerText = `${appState.studentId} ${appState.studentName}`;
+        $('#doneShortAnswer').innerText = `${appState.shortAnswerScore}개 정답 (3점 만점)`;
+        $('#doneQuizScore').innerText = `${appState.quizScore}점 (${correctCount}/3)`;
+        navigate('done');
 
-} catch (err) {
-showError("데이터 전송 실패. 네트워크를 확인하세요.");
-} finally {
-btn.disabled = false;
-btn.innerText = "보고서 및 결과 제출하기";
-}
-});
+      } catch (err) {
+        showError("데이터 전송 실패. 네트워크를 확인하세요.");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "보고서 및 결과 제출하기";
+      }
+    });
 
-function showError(msg) {
-console.error(msg);
-$('#errorMessageText').innerText = msg.toString();
-$('#errorBoundaryCard').classList.remove('hidden');
-}
+    function showError(msg) {
+      console.error(msg);
+      $('#errorMessageText').innerText = msg.toString();
+      $('#errorBoundaryCard').classList.remove('hidden');
+    }
 
-document.addEventListener("visibilitychange", () => {
-if (appState.engine && appState.view === 'sim') {
-document.hidden ? appState.engine.pause() : appState.engine.resume();
-}
-});
-</script>
+    document.addEventListener("visibilitychange", () => {
+      if (appState.engine && appState.view === 'sim') {
+        document.hidden ? appState.engine.pause() : appState.engine.resume();
+      }
+    });
+  </script>
 </body>
 </html>
